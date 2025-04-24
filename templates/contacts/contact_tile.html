@@ -1,0 +1,9 @@
+<div class="contact-tile" style="background: {{ bg_color }};">
+  <div class="contact-avatar" style="background-color: {{ color }};">{{ contact.first_name[0]|upper }}</div>
+  <div class="contact-info">
+    <div><b>{{ contact.first_name }} {{ contact.last_name }}</b></div>
+    <div>{{ contact.email }}</div>
+    <div>Телефоны: {% if contact.phone_numbers %}{{ contact.phone_numbers|join(', ') }}{% else %}-{% endif %}</div>
+    <!-- УДАЛЕНО: <div>Тестовое поле: {{ contact.test_number or '-' }}</div> -->
+  </div>
+</div>

@@ -1,0 +1,69 @@
+<div class="popup" id="popup-create-contact" style="display:none;">
+  <div class="popup-glass">
+    <div class="popup-header-gradient">
+      <span class="popup-header-gallery">фото</span>
+    </div>
+    <div class="popup-avatar-diamond">
+      <span id="contact-avatar-letter">A</span>
+    </div>
+    <form id="create-contact-form" autocomplete="off">
+      <label>Ім'я*:
+        <div class="form-field">
+          <input type="text" name="first_name" required maxlength="198">
+          <div class="field-error" data-field="first_name"></div>
+        </div>
+      </label>
+      <label>Прізвище:
+        <div class="form-field">
+          <input type="text" name="last_name" maxlength="198">
+          <div class="field-error" data-field="last_name"></div>
+        </div>
+      </label>
+      <label>Електронна адреса*:
+        <div class="form-field">
+          <input type="email" name="email" required maxlength="198">
+          <div class="field-error" data-field="email"></div>
+        </div>
+      </label>
+      <label>День народження*:
+        <span class="input-icon form-field">
+          <input type="date" name="birthday" required>
+          <i class="calendar-icon"></i>
+          <div class="field-error" data-field="birthday"></div>
+        </span>
+      </label>
+      <div id="phones-list"></div>
+      <button type="button" id="add-phone-btn" class="add-btn">+ Додати номер</button>
+      <label>Групи:
+        <span class="input-icon form-field">
+          <input type="text" name="groups" placeholder="групи через кому" readonly>
+          <button type="button" id="add-group-btn" class="add-btn">+</button>
+          <div class="field-error" data-field="groups"></div>
+        </span>
+      </label>
+      <div id="groups-list"></div>
+      <label>Додаткові дані:
+        <div class="form-field">
+          <textarea name="extra_info" maxlength="500"></textarea>
+          <div class="field-error" data-field="extra_info"></div>
+        </div>
+      </label>
+      <div class="popup-album-labels">
+        <span class="album-label">фотоальбом (будет позже)</span>
+        <span class="avatar-label">аватарки (будет позже)</span>
+      </div>
+      <div class="popup-actions">
+        <button type="submit">Зберегти</button>
+        <button type="button" onclick="closePopup('popup-create-contact')">Відміна</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+document.addEventListener('input', function(e) {
+  if (e.target.matches('input[type="tel"]')) {
+    e.target.value = e.target.value.replace(/[^0-9+\-()#* ]/g, '');
+  }
+});
+</script>
