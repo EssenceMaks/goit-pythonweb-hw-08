@@ -21,8 +21,8 @@
 
 1. **Склонуйте репозиторій:**
    ```sh
-   git clone <URL_ВАШОГО_РЕПОЗИТОРІЮ>
-   cd <назва_папки_проєкту>
+   git clone https://github.com/EssenceMaks/goit-pythonweb-hw-08.git
+   cd <директорія_проєкту>/goit-pythonweb-hw-08
    ```
 2. **Встановіть залежності:**
    ```sh
