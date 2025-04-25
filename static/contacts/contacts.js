@@ -11,27 +11,83 @@ function getSoftColor(seed) {
   return colors[code % colors.length];
 }
 
-// Отрисовка одной плитки контакта
-function renderContactTile(contact) {
-  const firstLetter = contact.first_name ? contact.first_name[0].toUpperCase() : '?';
-  const bgColor = getSoftColor(firstLetter);
-  return `
-    <div class="contact-tile" style="background:${bgColor}" data-id="${contact.id}">
-      <div class="contact-avatar">${firstLetter}</div>
-      <div class="contact-info">
-        <div class="contact-name">${contact.first_name} ${contact.last_name || ''}</div>
-        <div class="contact-email">${contact.email}</div>
-      </div>
-      <div class="contact-actions">
-        <button class="edit-contact" data-id="${contact.id}">✎</button>
-        <button class="full-contact" data-id="${contact.id}">ℹ️</button>
-        <button class="delete-contact" data-id="${contact.id}">🗑</button>
-      </div>
-    </div>
-  `;
+// Функция для генерации мягкого тёмного цвета
+function getSoftDarkColor(seed) {
+  // Мягкие тёмные цвета
+  const colors = [
+    '#2a2e38','#293144','#232b3a','#2b2d3c','#2e2c36','#27313c','#2a2f3f','#23263a','#2c2e38','#252b36'
+  ];
+  if (!seed) return colors[0];
+  const code = seed.charCodeAt(0);
+  return colors[code % colors.length];
 }
 
-// Загрузка всех контактов
+// --- Island-контакты: collapsed/expanded ---
+function collapseAllContacts() {
+  document.querySelectorAll('.contact-tile.expanded').forEach(tile => {
+    tile.classList.remove('expanded');
+    tile.querySelector('.contact-tile-actions').style.display = 'none';
+    tile.querySelector('.contact-tile-extra').style.display = 'none';
+  });
+}
+
+document.addEventListener('click', async function(e) {
+  const tile = e.target.closest('.contact-tile');
+  if (!tile) {
+    collapseAllContacts();
+    return;
+  }
+  if (!tile.classList.contains('expanded')) {
+    collapseAllContacts();
+    tile.classList.add('expanded');
+    tile.querySelector('.contact-tile-actions').style.display = 'flex';
+    tile.querySelector('.contact-tile-extra').style.display = 'block';
+    const id = tile.dataset.id;
+    if (id) {
+      try {
+        const resp = await fetch(`/contacts/${id}`);
+        if (resp.ok) {
+          const contact = await resp.json();
+          const phones = contact.phone_numbers ? contact.phone_numbers.slice(1).map(p => p.number || p).join(', ') : '';
+          tile.querySelector('.contact-tile-phones-additional').innerText = phones ? 'Ще телефони: ' + phones : '';
+          let preview = (contact.extra_info || '').split(/\s+/).slice(0,8).join(' ');
+          if (preview.length > 32) preview = preview.slice(0,32) + '...';
+          tile.querySelector('.contact-tile-extra-preview').innerText = preview;
+        }
+      } catch {}
+    }
+  }
+});
+
+function renderContactTile(contact) {
+  const firstLetter = contact.first_name ? contact.first_name[0].toUpperCase() : '?';
+  const tile = document.createElement('div');
+  tile.className = 'contact-tile';
+  tile.dataset.id = contact.id;
+  tile.style.setProperty('--contact-bg', getSoftDarkColor(firstLetter));
+  tile.innerHTML = `
+    <div class=\"contact-tile-grid\">
+      <div class=\"contact-avatar-diamond\"><span>${firstLetter}</span></div>
+      <div class=\"contact-tile-info\">
+        <div class=\"contact-tile-name\">${contact.first_name} ${contact.last_name || ''}</div>
+        <div class=\"contact-tile-birth\">${contact.birthday || ''}</div>
+        <div class=\"contact-tile-email\">${contact.email}</div>
+        <div class=\"contact-tile-phone\">${Array.isArray(contact.phone_numbers) && contact.phone_numbers.length ? (contact.phone_numbers[0].number || contact.phone_numbers[0]) : '-'}</div>
+      </div>
+    </div>
+    <div class=\"contact-tile-actions\" style=\"display:none;\">
+      <button class=\"edit-contact\" data-id=\"${contact.id}\">Редагувати</button>
+      <button class=\"delete-contact\" data-id=\"${contact.id}\">Видалити</button>
+      <button class=\"details-contact\" data-id=\"${contact.id}\">Деталі</button>
+    </div>
+    <div class=\"contact-tile-extra\" style=\"display:none;\">
+      <div class=\"contact-tile-phones-additional\"></div>
+      <div class=\"contact-tile-extra-preview\"></div>
+    </div>
+  `;
+  return tile.outerHTML;
+}
+
 async function loadContacts() {
   const list = document.getElementById('contacts-list');
   list.innerHTML = '<div>Загрузка...</div>';
@@ -47,11 +103,71 @@ async function loadContacts() {
     list.innerHTML = '<div>Ошибка загрузки</div>';
   }
 }
-
 document.addEventListener('DOMContentLoaded', loadContacts);
-
-// Глобальная функция для обновления контактов (используется из menu.js)
 window.refreshContacts = loadContacts;
+// --- конец island-контактов ---
+
+// Детали контакта (SPA-стиль)
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('.details-contact');
+  if (btn) {
+    const id = btn.getAttribute('data-id');
+    if (id) {
+      openFullContactPopup(id);
+    }
+  }
+});
+
+function openFullContactPopup(id) {
+  fetch(`/contacts/${id}`)
+    .then(resp => resp.json())
+    .then(contact => {
+      document.getElementById('popup-full-contact-content').innerHTML = renderFullContact(contact);
+      openPopup('popup-full-contact');
+    });
+}
+
+// Блокировка фона при открытом попапе
+function setPopupOpen(open) {
+  document.body.classList.toggle('popup-open', open);
+}
+
+const origOpenPopup = window.openPopup;
+window.openPopup = function(id) {
+  origOpenPopup.call(this, id);
+  setPopupOpen(true);
+};
+const origClosePopup = window.closePopup;
+window.closePopup = function(id) {
+  origClosePopup.call(this, id);
+  setPopupOpen(false);
+};
+
+document.querySelectorAll('.popup').forEach(popup => {
+  popup.addEventListener('mousedown', function(e) {
+    if (e.target === popup) {
+      if (confirm('Вийти з редагування контакту?')) {
+        closePopup(popup.id);
+      }
+    }
+  });
+});
+
+// Отрисовка одной плитки контакта
+function renderFullContact(contact) {
+  return `
+    <div class="full-contact-card">
+      <button id="btn-back-to-list">← Назад</button>
+      <h2>${contact.first_name} ${contact.last_name || ''}</h2>
+      <div><b>Email:</b> ${contact.email}</div>
+      <div><b>День рождения:</b> ${contact.birthday || ''}</div>
+      <div><b>Телефоны:</b> ${Array.isArray(contact.phone_numbers) && contact.phone_numbers.length ? contact.phone_numbers.map(pn => `${pn.number} (${pn.label||pn.type||''})`).join(', ') : '-'}</div>
+      <div><b>Группы:</b> ${Array.isArray(contact.groups) && contact.groups.length ? contact.groups.map(gr => gr.name || gr).join(', ') : '-'}</div>
+      <div><b>Дополнительно:</b> ${contact.extra_info || '-'}</div>
+      <div><b>ID:</b> ${contact.id}</div>
+    </div>
+  `;
+}
 
 // Делегирование событий для редактирования и удаления
 const contactList = document.getElementById('contacts-list');
@@ -65,13 +181,6 @@ if (contactList) {
     } else if (btn.classList.contains('delete-contact')) {
       document.getElementById('btn-confirm-delete').setAttribute('data-id', id);
       openPopup('popup-confirm-delete');
-    } else if (btn.classList.contains('full-contact')) {
-      // Показать полные данные контакта
-      const resp = await fetch(`/contacts/${id}`);
-      if (resp.ok) {
-        const contact = await resp.json();
-        showFullContact(contact);
-      }
     }
   });
 }
@@ -101,21 +210,6 @@ function showFullContact(contact) {
   if (btnBack) {
     btnBack.onclick = () => loadContacts();
   }
-}
-
-function renderFullContact(contact) {
-  return `
-    <div class="full-contact-card">
-      <button id="btn-back-to-list">← Назад</button>
-      <h2>${contact.first_name} ${contact.last_name || ''}</h2>
-      <div><b>Email:</b> ${contact.email}</div>
-      <div><b>День рождения:</b> ${contact.birthday || ''}</div>
-      <div><b>Телефоны:</b> ${Array.isArray(contact.phone_numbers) && contact.phone_numbers.length ? contact.phone_numbers.map(pn => `${pn.number} (${pn.label||pn.type||''})`).join(', ') : '-'}</div>
-      <div><b>Группы:</b> ${Array.isArray(contact.groups) && contact.groups.length ? contact.groups.map(gr => gr.name || gr).join(', ') : '-'}</div>
-      <div><b>Дополнительно:</b> ${contact.extra_info || '-'}</div>
-      <div><b>ID:</b> ${contact.id}</div>
-    </div>
-  `;
 }
 
 // Функция для заполнения формы контакта (редактирование)
@@ -174,7 +268,7 @@ function addPhoneRow(number = '', label = 'Мобільний') {
   div.className = 'phone-number-row';
   div.innerHTML = `
     <div class="phone-input-wrap">
-      <input type="tel" required minlength="2" maxlength="32" pattern="[0-9 +()\-]*" placeholder="Номер телефону" value="${number}">
+      <input type="tel" required minlength="2" maxlength="32" pattern="[0-9()+#* -]{2,31}" placeholder="Номер телефону" value="${number}">
       <div class="phone-error"></div>
     </div>
     <select>

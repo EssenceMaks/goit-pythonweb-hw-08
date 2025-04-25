@@ -15,11 +15,19 @@
   <div class="main-container">
     <div class="grid">
       {% include 'menu/menu.html' %}
-      {% include 'filter/filter.html' %}
+      <div class="sort">
+        <b>Сортировка:</b>
+        <div class="sort-filters">
+          <button class="sort-btn active" data-sort="name">По имени</button>
+          <button class="sort-btn" data-sort="email">По email</button>
+          <button class="sort-btn" data-sort="date">По дате</button>
+        </div>
+      </div>
       {% include 'contacts/contacts.html' %}
       {% include 'footer/footer.html' %}
     </div>
   </div>
+  {% include 'popups/full_contact_popup.html' %}
   {% include 'popups/contact_form.html' %}
   {% include 'popups/confirm_delete.html' %}
   <script src="/static/app.js"></script>

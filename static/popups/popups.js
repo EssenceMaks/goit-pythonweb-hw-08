@@ -40,7 +40,8 @@ function addPhoneRow(value = '', type = 'Мобільний') {
   const idx = phonesList.children.length;
   const row = document.createElement('div');
   row.className = 'phone-row';
-  row.innerHTML = `<div class='phone-input-wrap form-field'><input class='phone-input' type='tel' pattern='^[0-9+\\-()#* ]{2,31}$' minlength='2' maxlength='31' inputmode='tel' value='${value}' placeholder='номер телефону' required><div class='phone-error field-error' data-field='phone_${idx}'></div></div><select class='phone-type'>${phoneTypes.map(t => `<option${t===type?' selected':''}>${t}</option>`).join('')}</select><button type='button' class='remove-phone-btn' title='Видалити'>✕</button>`;
+  // Исправленный pattern для всех браузеров
+  row.innerHTML = `<div class='phone-input-wrap form-field'><input class='phone-input' type='tel' pattern='[0-9()+#* -]{2,31}' minlength='2' maxlength='31' inputmode='tel' value='${value}' placeholder='номер телефону' required><div class='phone-error field-error' data-field='phone_${idx}'></div></div><select class='phone-type'>${phoneTypes.map(t => `<option${t===type?' selected':''}>${t}</option>`).join('')}</select><button type='button' class='remove-phone-btn' title='Видалити'>✕</button>`;
   row.querySelector('.remove-phone-btn').onclick = () => row.remove();
   phonesList.appendChild(row);
 }
