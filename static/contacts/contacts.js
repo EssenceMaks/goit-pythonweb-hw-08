@@ -15,8 +15,15 @@ function getSoftColor(seed) {
 function getSoftDarkColor(seed) {
   // Мягкие тёмные цвета
   const colors = [
-    '#2a2e38','#293144','#232b3a','#2b2d3c','#2e2c36','#27313c','#2a2f3f','#23263a','#2c2e38','#252b36'
+    '#3e3a5e', // violet haze
+    '#4b3f72', // dusky neon purple
+    '#5c5270', // lavender smoke
+    '#364f6b', // calm tech blue
+    '#3b3f58', // matte indigo
+    '#6a67ce', // soft neon violet
+    '#00c9a7'  // glowing mint
   ];
+  
   if (!seed) return colors[0];
   const code = seed.charCodeAt(0);
   return colors[code % colors.length];
@@ -61,31 +68,36 @@ document.addEventListener('click', async function(e) {
 
 function renderContactTile(contact) {
   const firstLetter = contact.first_name ? contact.first_name[0].toUpperCase() : '?';
-  const tile = document.createElement('div');
-  tile.className = 'contact-tile';
-  tile.dataset.id = contact.id;
-  tile.style.setProperty('--contact-bg', getSoftDarkColor(firstLetter));
-  tile.innerHTML = `
-    <div class=\"contact-tile-grid\">
-      <div class=\"contact-avatar-diamond\"><span>${firstLetter}</span></div>
-      <div class=\"contact-tile-info\">
-        <div class=\"contact-tile-name\">${contact.first_name} ${contact.last_name || ''}</div>
-        <div class=\"contact-tile-birth\">${contact.birthday || ''}</div>
-        <div class=\"contact-tile-email\">${contact.email}</div>
-        <div class=\"contact-tile-phone\">${Array.isArray(contact.phone_numbers) && contact.phone_numbers.length ? (contact.phone_numbers[0].number || contact.phone_numbers[0]) : '-'}</div>
+  const colorClasses = [
+    'color-1', 'color-2', 'color-3', 'color-4',
+    'color-5', 'color-6', 'color-7', 'color-8'
+  ];
+  const colorIndex = firstLetter.charCodeAt(0) % colorClasses.length;
+  const tileClass = 'tile-' + colorClasses[colorIndex];
+  const borderClass = 'border-' + colorClasses[colorIndex];
+  return `
+    <div class="contact-tile ${tileClass}" data-id="${contact.id}">
+      <div class="contact-tile-border ${borderClass}"></div>
+      <div class="contact-tile-grid">
+        <div class="contact-avatar-diamond"><span>${firstLetter}</span></div>
+        <div class="contact-tile-info">
+          <div class="contact-tile-name">${contact.first_name} ${contact.last_name || ''}</div>
+          <div class="contact-tile-birth">${contact.birthday || ''}</div>
+          <div class="contact-tile-email">${contact.email}</div>
+          <div class="contact-tile-phone">${Array.isArray(contact.phone_numbers) && contact.phone_numbers.length ? (contact.phone_numbers[0].number || contact.phone_numbers[0]) : '-'}</div>
+        </div>
+      </div>
+      <div class="contact-tile-actions" style="display:none;">
+        <button class="edit-contact" data-id="${contact.id}">Редагувати</button>
+        <button class="delete-contact" data-id="${contact.id}">Видалити</button>
+        <button class="details-contact" data-id="${contact.id}">Деталі</button>
+      </div>
+      <div class="contact-tile-extra" style="display:none;">
+        <div class="contact-tile-phones-additional"></div>
+        <div class="contact-tile-extra-preview"></div>
       </div>
     </div>
-    <div class=\"contact-tile-actions\" style=\"display:none;\">
-      <button class=\"edit-contact\" data-id=\"${contact.id}\">Редагувати</button>
-      <button class=\"delete-contact\" data-id=\"${contact.id}\">Видалити</button>
-      <button class=\"details-contact\" data-id=\"${contact.id}\">Деталі</button>
-    </div>
-    <div class=\"contact-tile-extra\" style=\"display:none;\">
-      <div class=\"contact-tile-phones-additional\"></div>
-      <div class=\"contact-tile-extra-preview\"></div>
-    </div>
   `;
-  return tile.outerHTML;
 }
 
 async function loadContacts() {

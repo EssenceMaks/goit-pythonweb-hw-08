@@ -11,33 +11,81 @@
 }
 
 /* Меньше island-плитки и текста, мягкий рандомный фон */
+.contact-tile-wrapper {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
 .contact-tile {
-  background: var(--contact-bg, #2a2e38);
-  border-radius: 12px;
-  box-shadow: 0 1px 8px 0 rgba(0,0,0,0.14);
+  position: relative !important;
+  z-index: 1;
   color: #f5f6fa;
-  margin-bottom: 14px;
-  padding: 12px 14px;
-  border: 2px solid rgba(255,255,255,0.09);
-  transition: box-shadow 0.2s, border 0.2s, background 0.2s, max-height 0.2s;
+  margin-bottom: 18px;
+  padding: 16px;
   cursor: pointer;
   max-width: 350px;
-  margin-left: auto;
-  margin-right: auto;
-  overflow: hidden;
+  border-radius: 16px;
+  box-shadow: 0 1px 8px 0 rgba(0,0,0,0.14);
+  border: none;
+  transition: box-shadow 0.2s, background 0.2s;
+  overflow: visible;
+}
+
+.contact-tile-border {
+  position: absolute !important;
+  top: -3px !important; left: -3px !important; right: -3px !important; bottom: -3px !important;
+  border-radius: 19px !important;
+  z-index: 0;
+  pointer-events: none;
+  transition: background 0.25s, opacity 0.25s;
+  opacity: 1;
+  border: none !important;
+}
+
+/* Цвета для карточек и бордера (одинаковые классы) */
+.tile-color-1 { background: #3e3a5e !important; }
+.tile-color-2 { background: #4b3f72 !important; }
+.tile-color-3 { background: #5c5270 !important; }
+.tile-color-4 { background: #364f6b !important; }
+.tile-color-5 { background: #3b3f58 !important; }
+.tile-color-6 { background: #6a67ce !important; }
+.tile-color-7 { background: #00c9a7 !important; }
+.tile-color-8 { background: #23272f !important; }
+
+.border-color-1 { background: #3e3a5e; }
+.border-color-2 { background: #4b3f72; }
+.border-color-3 { background: #5c5270; }
+.border-color-4 { background: #364f6b; }
+.border-color-5 { background: #3b3f58; }
+.border-color-6 { background: #6a67ce; }
+.border-color-7 { background: #00c9a7; }
+.border-color-8 { background: #23272f; }
+
+.contact-tile:hover .contact-tile-border,
+.contact-tile.selected .contact-tile-border {
+  background: linear-gradient(270deg, #27ef8c, #29e6f6, #3b6cf6, #27ef8c);
+  background-size: 400% 400%;
+  animation: border-rainbow-border 3s linear infinite;
+  opacity: 1;
+}
+
+@keyframes border-rainbow-border {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 100% 50%; }
+}
+
+.contact-tile > *:not(.contact-tile-border) {
   position: relative;
+  z-index: 1;
 }
+
+.contact-tile.selected,
 .contact-tile:hover {
-  border: 2.5px solid #4a90e2;
-  box-shadow: 0 4px 20px 0 #4a90e2bb;
+  box-shadow: none;
 }
-.contact-tile.expanded {
-  background: var(--contact-bg, #1a1e28);
-  border: 2.5px solid #82e0ff;
-  box-shadow: 0 8px 32px 0 #82e0ff77;
-  z-index: 2;
-  max-height: 900px;
-}
+
 .contact-tile-grid {
   display: flex;
   flex-direction: row;
@@ -119,4 +167,17 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+rt {
+color: #1f2235; 
+color: #2c2f3f; 
+color: #3a3e5b; 
+color: #454b66; 
+color: #2e3c49; 
+color: #38404e; 
+color: #313745; 
+color: #4a5568; 
+color: #3f4856; 
+color: #525c6e;  
 }
