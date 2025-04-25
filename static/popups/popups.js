@@ -33,7 +33,7 @@ function closePopup(id) {
 
 // Динамические телефоны
 const phonesList = document.getElementById('phones-list');
-const addPhoneBtn = document.getElementById('add-phone-btn');
+const addPhoneBtn = document.getElementById('add-phone-btn'); // Только одно объявление!
 const phoneTypes = ['Мобільний', 'Домашній', 'Робочий', 'Інший'];
 function addPhoneRow(value = '', type = 'Мобільний') {
   if (!phonesList) return;

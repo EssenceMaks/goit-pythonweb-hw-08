@@ -1,5 +1,14 @@
-<div class="contacts" id="contacts-list">
-  <!-- Контакты будут подгружаться сюда через JS -->
-  <table>
-  </table>
+<div class="contacts">
+  <div class="contacts-scroll" id="contacts-list">
+    <!-- Контакты будут подгружаться сюда через JS -->
+    <table>
+    </table>
+  </div>
+  <div class="api-link-block" style="padding:16px 24px 8px 24px; border-top:1px solid #444; display:flex; align-items:center; gap:12px; font-size:0.95em; background:rgba(40,46,56,0.92);">
+    <span>API: </span>
+    <a id="api-link" href="/contacts" target="_blank" style="color:#4acaff; text-decoration:underline; word-break:break-all;">/contacts</a>
+    <button id="copy-api-link" title="Копировать ссылку" style="margin-left:4px;">📋</button>
+    <button id="goto-api-link" title="Перейти по ссылке">➡️</button>
+    <span id="copy-success" style="margin-left:8px; color:#7fff7f; display:none;">Скопировано!</span>
+  </div>
 </div>
