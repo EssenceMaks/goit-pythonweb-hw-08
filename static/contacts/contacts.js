@@ -396,7 +396,8 @@ if (createForm) {
         createForm.removeAttribute('data-edit-id');
         const popupH2 = document.querySelector('#popup-create-contact h2');
         if (popupH2) popupH2.innerText = 'Создать контакт';
-        loadContacts();
+        window.resetContactsUI();
+        window.fetchAndRenderContacts();
       } else {
         let errText = 'Ошибка сохранения контакта';
         try {
@@ -431,7 +432,8 @@ if (btnDelete) {
       const resp = await fetch(`/contacts/${id}`, { method: 'DELETE' });
       if (resp.ok) {
         closePopup('popup-confirm-delete');
-        loadContacts();
+        window.resetContactsUI();
+        window.fetchAndRenderContacts();
       } else {
         alert('Ошибка удаления');
       }
@@ -495,7 +497,7 @@ document.addEventListener('DOMContentLoaded', function() {
   let currentDir = 'asc';
   let birthdayMode = false;
 
-  function fetchAndRenderContacts() {
+  function fetchAndRenderContactsInner() {
     if (typeof renderContactTile !== 'function') {
       contactsList.innerHTML = '<div style="color:red">Ошибка: renderContactTile не определена</div>';
       console.error('renderContactTile не определена');
@@ -574,23 +576,30 @@ document.addEventListener('DOMContentLoaded', function() {
       });
   }
 
-// --- Сброс birthdayMode и обновление списка после операций ---
-function resetAndRenderContacts() {
-  birthdayMode = false;
-  fetchAndRenderContacts();
-}
+// --- Глобальный сброс фильтров и UI контактов ---
+window.resetContactsUI = function() {
+  // Сбросить поиск
+  const searchInput = document.getElementById('contact-search');
+  if (searchInput) searchInput.value = '';
+  // Сбросить сортировку
+  const sortAlphaBtn = document.getElementById('sort-alpha');
+  if (sortAlphaBtn) sortAlphaBtn.textContent = 'Алфавітний порядок ↑';
+  // Сбросить режимы
+  if (typeof currentSearch !== 'undefined') currentSearch = '';
+  if (typeof currentDir !== 'undefined') currentDir = 'asc';
+  if (typeof birthdayMode !== 'undefined') birthdayMode = false;
+};
 
-// Пример использования:
-// После создания, удаления, массовых операций вызывай resetAndRenderContacts();
-// Например, в функциях обработки кнопок:
-// document.getElementById('delete-all-btn').addEventListener('click', () => { ... resetAndRenderContacts(); });
-// document.getElementById('create-random-btn').addEventListener('click', () => { ... resetAndRenderContacts(); });
+// --- Для глобального обновления контактов после операций с БД ---
+window.fetchAndRenderContacts = function() {
+  if (typeof fetchAndRenderContactsInner === 'function') fetchAndRenderContactsInner();
+};
 
   if (searchInput) {
     searchInput.addEventListener('input', e => {
       currentSearch = e.target.value.trim();
       birthdayMode = false;
-      fetchAndRenderContacts();
+      fetchAndRenderContactsInner();
     });
   }
 
@@ -599,7 +608,7 @@ function resetAndRenderContacts() {
       birthdayMode = false;
       currentDir = currentDir === 'asc' ? 'desc' : 'asc';
       sortAlphaBtn.textContent = `Алфавітний порядок ${currentDir === 'asc' ? '↑' : '↓'}`;
-      fetchAndRenderContacts();
+      fetchAndRenderContactsInner();
       showApiLinkForList({search: currentSearch, dir: currentDir, birthdayMode, birthdayType: undefined});
     });
   }
@@ -607,12 +616,12 @@ function resetAndRenderContacts() {
   if (sortBirthdayBtn) {
     sortBirthdayBtn.addEventListener('click', () => {
       birthdayMode = true;
-      fetchAndRenderContacts();
+      fetchAndRenderContactsInner();
       showApiLinkForList({search: currentSearch, dir: currentDir, birthdayMode, birthdayType: 'next7days'});
     });
   }
 
-  fetchAndRenderContacts();
+  fetchAndRenderContactsInner();
 });
 
 // --- конец UI: поиск и сортировка контактов ---

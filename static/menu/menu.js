@@ -68,6 +68,13 @@ function showFooterMessage(msg, type = 'info') {
   addFooterMessage(msg, type);
 }
 
+// --- Глобальная функция для сброса фильтров и обновления контактов ---
+window.resetAndRenderContacts = function() {
+  // Сбросить фильтры поиска, сортировки, дней рождения
+  if (window.resetContactsUI) window.resetContactsUI();
+  if (window.fetchAndRenderContacts) window.fetchAndRenderContacts();
+};
+
 // Кнопки меню для работы с БД
 document.addEventListener('DOMContentLoaded', function() {
   checkDBState();
@@ -99,7 +106,7 @@ document.addEventListener('DOMContentLoaded', function() {
           const data2 = await resp2.json();
           if (resp2.ok && (data2.status === 'created' || data2.status === 'exists')) {
             addFooterMessage('База и таблицы готовы!', 'success');
-            window.refreshContacts();
+            window.resetAndRenderContacts();
           } else {
             addFooterMessage('Ошибка инициализации таблиц', 'error');
           }
@@ -126,7 +133,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const data = await resp.json();
         if (resp.ok && data.status === 'dropped') {
           addFooterMessage(data.message, 'success');
-          window.refreshContacts();
+          window.resetAndRenderContacts();
         } else {
           addFooterMessage(data.message || 'Ошибка удаления базы', 'error');
         }
@@ -145,7 +152,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const resp = await fetch('/db/init', {method:'POST'});
         if (resp.ok) {
           addFooterMessage('База успешно инициализирована', 'success');
-          window.refreshContacts();
+          window.resetAndRenderContacts();
         } else {
           addFooterMessage('Ошибка инициализации базы', 'error');
         }
@@ -163,7 +170,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const resp = await fetch('/db/fill-fake?n=10', {method:'POST'});
         if (resp.ok) {
           addFooterMessage('Контакты успешно добавлены', 'success');
-          window.refreshContacts();
+          window.resetAndRenderContacts();
         } else {
           addFooterMessage('Ошибка добавления контактов', 'error');
         }
@@ -181,7 +188,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const resp = await fetch('/db/clear', {method:'POST'});
         if (resp.ok) {
           addFooterMessage('Все контакты удалены', 'success');
-          window.refreshContacts();
+          window.resetAndRenderContacts();
         } else {
           addFooterMessage('Ошибка удаления контактов', 'error');
         }
