@@ -16,11 +16,11 @@
     <div class="grid">
       {% include 'menu/menu.html' %}
       <div class="sort">
-        <b>Сортировка:</b>
+        <input type="text" id="contact-search" class="contact-search" placeholder="Пошук..." autocomplete="off" style="margin-right:1em;max-width:180px;">
+        <b>Сортування:</b>
         <div class="sort-filters">
-          <button class="sort-btn active" data-sort="name">По имени</button>
-          <button class="sort-btn" data-sort="email">По email</button>
-          <button class="sort-btn" data-sort="date">По дате</button>
+          <button class="sort-btn" id="sort-alpha" data-sort="alpha" data-dir="asc">Алфавітний порядок ↑</button>
+          <button class="sort-btn" id="sort-birthday" data-sort="birthday">Найближчі Дні Народження</button>
         </div>
       </div>
       {% include 'contacts/contacts.html' %}

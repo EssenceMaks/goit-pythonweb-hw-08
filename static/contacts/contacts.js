@@ -1,4 +1,4 @@
-// JS для контактов
+// alert('contacts.js подключён!');// JS для контактов
 
 // Функция для генерации мягкого случайного цвета
 function getSoftColor(seed) {
@@ -103,8 +103,7 @@ async function loadContacts() {
     list.innerHTML = '<div>Ошибка загрузки</div>';
   }
 }
-document.addEventListener('DOMContentLoaded', loadContacts);
-window.refreshContacts = loadContacts;
+
 // --- конец island-контактов ---
 
 // Детали контакта (SPA-стиль)
@@ -441,3 +440,74 @@ if (btnDelete) {
     }
   });
 }
+
+// --- UI: поиск и сортировка контактов ---
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('Контакты JS загружен');
+  const searchInput = document.getElementById('contact-search');
+  const sortAlphaBtn = document.getElementById('sort-alpha');
+  const sortBirthdayBtn = document.getElementById('sort-birthday');
+  const contactsList = document.getElementById('contacts-list');
+
+  let currentSearch = '';
+  let currentSort = 'alpha';
+  let currentDir = 'asc';
+  let birthdayMode = false;
+
+  function fetchAndRenderContacts() {
+    if (typeof renderContactTile !== 'function') {
+      contactsList.innerHTML = '<div style="color:red">Ошибка: renderContactTile не определена</div>';
+      console.error('renderContactTile не определена');
+      return;
+    }
+    let url = '/contacts?';
+    if (birthdayMode) {
+      url = '/contacts/birthdays/next7days';
+    } else {
+      if (currentSearch) url += `search=${encodeURIComponent(currentSearch)}&`;
+      if (currentSort === 'alpha') url += `sort=${currentDir}`;
+    }
+    fetch(url)
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          contactsList.innerHTML = data.map(renderContactTile).join('');
+        } else if (data.contacts) {
+          contactsList.innerHTML = data.contacts.map(renderContactTile).join('');
+        } else {
+          contactsList.innerHTML = '<div class="empty-msg">Нічого не знайдено</div>';
+        }
+      })
+      .catch(err => {
+        contactsList.innerHTML = '<div style="color:red">Ошибка загрузки контактов</div>';
+        console.error('Ошибка загрузки:', err);
+      });
+  }
+
+  if (searchInput) {
+    searchInput.addEventListener('input', e => {
+      currentSearch = e.target.value.trim();
+      birthdayMode = false;
+      fetchAndRenderContacts();
+    });
+  }
+
+  if (sortAlphaBtn) {
+    sortAlphaBtn.addEventListener('click', () => {
+      birthdayMode = false;
+      currentSort = 'alpha';
+      currentDir = currentDir === 'asc' ? 'desc' : 'asc';
+      sortAlphaBtn.textContent = `Алфавітний порядок ${currentDir === 'asc' ? '↑' : '↓'}`;
+      fetchAndRenderContacts();
+    });
+  }
+
+  if (sortBirthdayBtn) {
+    sortBirthdayBtn.addEventListener('click', () => {
+      birthdayMode = true;
+      fetchAndRenderContacts();
+    });
+  }
+
+  fetchAndRenderContacts();
+});
