@@ -17,10 +17,10 @@ def db_status():
         inspector = inspect(engine)
         tables = inspector.get_table_names()
         if not tables:
-            return {"status": "empty", "message": "База есть, но таблиц нет."}
+            return {"status": "empty", "message": "База є, але таблиць немає."}
         return {"status": "ok", "tables": tables}
     except OperationalError:
-        return {"status": "fail", "message": "Нет подключения к базе данных."}
+        return {"status": "fail", "message": "Немає підключення до бази даних."}
 
 @router.post("/init")
 def db_init():
@@ -28,21 +28,21 @@ def db_init():
         inspector = inspect(engine)
         tables = inspector.get_table_names()
         if tables:
-            return {"status": "exists", "message": "Таблицы уже созданы."}
+            return {"status": "exists", "message": "Таблиці вже створені."}
         models.Base.metadata.create_all(bind=engine)
-        return {"status": "created", "message": "Таблицы успешно созданы."}
+        return {"status": "created", "message": "Таблиці успішно створені."}
     except OperationalError:
-        raise HTTPException(status_code=500, detail="Нет подключения к базе данных.")
+        raise HTTPException(status_code=500, detail="Немає підключення до бази даних.")
 
 @router.post("/fill-fake")
 def db_fill_fake(n: int = 10):
     try:
         db = SessionLocal()
-        # Проверим, есть ли таблицы
+        # Перевіримо, чи є таблиці
         inspector = inspect(engine)
         if not inspector.get_table_names():
             models.Base.metadata.create_all(bind=engine)
-        # Заполним фейковыми контактами
+        # Заповнимо фейковими контактами
         from models import Contact, PhoneNumber
         import random
         for _ in range(n):
@@ -71,9 +71,9 @@ def db_fill_fake(n: int = 10):
                 )
                 db.add(pn)
         db.commit()
-        return {"status": "ok", "message": f"Добавлено {n} случайных контактов."}
+        return {"status": "ok", "message": f"Додано {n} випадкових контактів."}
     except OperationalError:
-        raise HTTPException(status_code=500, detail="Нет подключения к базе данных.")
+        raise HTTPException(status_code=500, detail="Немає підключення до бази даних.")
     finally:
         db.close()
 
@@ -87,9 +87,9 @@ def db_clear():
         db.query(Photo).delete()
         db.query(Contact).delete()
         db.commit()
-        return {"status": "ok", "message": "Все контакты удалены."}
+        return {"status": "ok", "message": "Всі контакти видалені."}
     except OperationalError:
-        raise HTTPException(status_code=500, detail="Нет подключения к базе данных.")
+        raise HTTPException(status_code=500, detail="Немає підключення до бази даних.")
     finally:
         db.close()
 
@@ -121,7 +121,7 @@ def create_database(request: Request):
     password = url.password
     host = url.hostname
     port = url.port or 5432
-    # Проверка на дефолтный пароль/отсутствие пароля
+    # Перевірка на дефолтний пароль/відсутність пароля
     if not password or password == "YOUR_PASSWORD":
         return {"status": "noenv", "message": "Для створення бази встановіть налаштування в коді за допомогою <br> env.example та перезавантажте сервер"}
     try:
@@ -152,7 +152,7 @@ def drop_database(request: Request):
         conn = psycopg2.connect(dbname='postgres', user=user, password=password, host=host, port=port)
         conn.autocommit = True
         cur = conn.cursor()
-        # Отключить пользователей от базы
+        # Відключити користувачів від бази
         cur.execute(f"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '{db_name}'")
         cur.execute(f"DROP DATABASE {db_name}")
         cur.close()

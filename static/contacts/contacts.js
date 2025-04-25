@@ -1,8 +1,8 @@
-// alert('contacts.js подключён!');// JS для контактов
+// alert('contacts.js підключено!'); // JS для контактів
 
-// Функция для генерации мягкого случайного цвета
+// Функція для генерації м'якого випадкового кольору
 function getSoftColor(seed) {
-  // Простая генерация "мягкого" цвета на основе первой буквы
+  // Проста генерація "м'якого" кольору на основі першої літери
   const colors = [
     '#e0e7ff', '#ffe0ec', '#e0fff4', '#fffbe0', '#e0f7fa', '#f3e0ff', '#eaffd9', '#ffd9e6', '#d9eaff', '#f0fff4'
   ];
@@ -11,9 +11,9 @@ function getSoftColor(seed) {
   return colors[code % colors.length];
 }
 
-// Функция для генерации мягкого тёмного цвета
+// Функція для генерації м'якого темного кольору
 function getSoftDarkColor(seed) {
-  // Мягкие тёмные цвета
+  // М'які темні кольори
   const colors = [
     '#3e3a5e', // violet haze
     '#4b3f72', // dusky neon purple
@@ -29,7 +29,7 @@ function getSoftDarkColor(seed) {
   return colors[code % colors.length];
 }
 
-// --- Island-контакты: collapsed/expanded ---
+// --- Island-контакти: collapsed/expanded ---
 function collapseAllContacts() {
   document.querySelectorAll('.contact-tile.expanded').forEach(tile => {
     tile.classList.remove('expanded');
@@ -102,23 +102,23 @@ function renderContactTile(contact) {
 
 async function loadContacts() {
   const list = document.getElementById('contacts-list');
-  list.innerHTML = '<div>Загрузка...</div>';
+  list.innerHTML = '<div>Завантаження...</div>';
   try {
     const resp = await fetch('/contacts');
     const data = await resp.json();
     if (Array.isArray(data) && data.length > 0) {
       list.innerHTML = data.map(renderContactTile).join('');
     } else {
-      list.innerHTML = '<div>Нет контактов</div>';
+      list.innerHTML = '<div>Немає контактів</div>';
     }
   } catch (e) {
-    list.innerHTML = '<div>Ошибка загрузки</div>';
+    list.innerHTML = '<div>Помилка завантаження</div>';
   }
 }
 
-// --- конец island-контактов ---
+// --- кінець island-контактів ---
 
-// Детали контакта (SPA-стиль)
+// Деталі контакту (SPA-стиль)
 document.addEventListener('click', function(e) {
   const btn = e.target.closest('.details-contact');
   if (btn) {
@@ -138,7 +138,7 @@ function openFullContactPopup(id) {
     });
 }
 
-// Блокировка фона при открытом попапе
+// Блокування фону при відкритому попапі
 function setPopupOpen(open) {
   document.body.classList.toggle('popup-open', open);
 }
@@ -164,23 +164,23 @@ document.querySelectorAll('.popup').forEach(popup => {
   });
 });
 
-// Отрисовка одной плитки контакта
+// Відмалювання однієї плитки контакту
 function renderFullContact(contact) {
   return `
     <div class="full-contact-card">
       <button id="btn-back-to-list">← Назад</button>
       <h2>${contact.first_name} ${contact.last_name || ''}</h2>
       <div><b>Email:</b> ${contact.email}</div>
-      <div><b>День рождения:</b> ${contact.birthday || ''}</div>
-      <div><b>Телефоны:</b> ${Array.isArray(contact.phone_numbers) && contact.phone_numbers.length ? contact.phone_numbers.map(pn => `${pn.number} (${pn.label||pn.type||''})`).join(', ') : '-'}</div>
-      <div><b>Группы:</b> ${Array.isArray(contact.groups) && contact.groups.length ? contact.groups.map(gr => gr.name || gr).join(', ') : '-'}</div>
-      <div><b>Дополнительно:</b> ${contact.extra_info || '-'}</div>
+      <div><b>День народження:</b> ${contact.birthday || ''}</div>
+      <div><b>Телефони:</b> ${Array.isArray(contact.phone_numbers) && contact.phone_numbers.length ? contact.phone_numbers.map(pn => `${pn.number} (${pn.label||pn.type||''})`).join(', ') : '-'}</div>
+      <div><b>Групи:</b> ${Array.isArray(contact.groups) && contact.groups.length ? contact.groups.map(gr => gr.name || gr).join(', ') : '-'}</div>
+      <div><b>Додатково:</b> ${contact.extra_info || '-'}</div>
       <div><b>ID:</b> ${contact.id}</div>
     </div>
   `;
 }
 
-// Делегирование событий для редактирования и удаления
+// Делегування подій для редагування і видалення
 const contactList = document.getElementById('contacts-list');
 if (contactList) {
   contactList.addEventListener('click', async function(e) {
@@ -196,23 +196,23 @@ if (contactList) {
   });
 }
 
-// Открыть попап и заполнить форму с задержкой для гарантии DOM
+// Відкрити попап і заповнити форму із затримкою для гарантії DOM
 async function openEditContactPopup(id) {
   openPopup('popup-create-contact');
-  // Ждем 100ms чтобы DOM точно был готов
+  // Чекаємо 100ms, щоб DOM точно був готовий
   setTimeout(async () => {
     const resp = await fetch(`/contacts/${id}`);
     if (resp.ok) {
       const contact = await resp.json();
       fillContactForm(contact);
       const popupH2 = document.querySelector('#popup-create-contact h2');
-      if (popupH2) popupH2.innerText = 'Редактировать контакт';
+      if (popupH2) popupH2.innerText = 'Редагувати контакт';
       createForm.setAttribute('data-edit-id', id);
     }
   }, 100);
 }
 
-// Шаблон для отображения полных данных контакта
+// Шаблон для відображення повних даних контакту
 function showFullContact(contact) {
   const list = document.getElementById('contacts-list');
   list.innerHTML = renderFullContact(contact);
@@ -223,7 +223,7 @@ function showFullContact(contact) {
   }
 }
 
-// Функция для заполнения формы контакта (редактирование)
+// Функція для заповнення форми контакту (редагування)
 function fillContactForm(contact) {
   console.log('fillContactForm data:', contact);
   createForm.reset();
@@ -271,7 +271,7 @@ function fillContactForm(contact) {
 }
 window.fillContactForm = fillContactForm;
 
-// Динамическое добавление номера телефона
+// Динамічне додавання номера телефону
 function addPhoneRow(number = '', label = 'Мобільний') {
   const phonesList = document.getElementById('phones-list');
   if (!phonesList) return;
@@ -295,7 +295,7 @@ function addPhoneRow(number = '', label = 'Мобільний') {
 }
 window.addPhoneRow = addPhoneRow;
 
-// Кастомная inline-валидация для телефона
+// Кастомна inline-валідація для телефону
 function showPhoneError(input) {
   const errorDiv = input.parentElement.querySelector('.phone-error');
   if (input.validity.patternMismatch) {
@@ -318,14 +318,14 @@ document.addEventListener('blur', function(e) {
   }
 }, true);
 
-// Добавление номера по кнопке
+// Додавання номера за кнопкою
 const addPhoneBtn = document.getElementById('add-phone-btn');
 if (addPhoneBtn && !addPhoneBtn.hasAttribute('data-init')) {
   addPhoneBtn.onclick = () => addPhoneRow();
   addPhoneBtn.setAttribute('data-init', '1');
 }
 
-// При открытии формы по умолчанию хотя бы один номер
+// При відкритті форми за замовчуванням хоча б один номер
 if (window.createForm) {
   window.createForm.addEventListener('reset', () => {
     setTimeout(() => {
@@ -338,10 +338,10 @@ if (window.createForm) {
   });
 }
 
-// Создание контакта через форму
+// Створення контакту через форму
 const createForm = document.getElementById('create-contact-form');
 if (createForm) {
-  // Счетчик попыток для даты рождения
+  // Лічильник спроб для дати народження
   let birthdayAttempts = 0;
 
   createForm.addEventListener('submit', async function(e) {
@@ -362,10 +362,10 @@ if (createForm) {
       birthdayAttempts = 0;
     }
 
-    // Проверка валидности всей формы
+    // Перевірка валідності всієї форми
     if (!createForm.checkValidity()) {
       e.preventDefault();
-      // Все ошибки будут показаны inline
+      // Всі помилки будуть показані inline
       return;
     }
 
@@ -375,7 +375,7 @@ if (createForm) {
     for (const [key, value] of formData.entries()) {
       data[key] = value;
     }
-    // Собираем телефоны как массив объектов {number, label}
+    // Збираємо телефони як масив об'єктів {number, label}
     const phoneRows = document.querySelectorAll('#phones-list .phone-number-row');
     data.phone_numbers = [];
     phoneRows.forEach(row => {
@@ -387,7 +387,7 @@ if (createForm) {
         data.phone_numbers.push({ number, label });
       }
     });
-    // Если нет ни одного номера, всё равно отправляем пустой массив
+    // Якщо немає жодного номера, все одно відправляємо порожній масив
     if (!Array.isArray(data.phone_numbers)) data.phone_numbers = [];
     const editId = createForm.getAttribute('data-edit-id');
     let url = '/contacts/';
@@ -411,12 +411,12 @@ if (createForm) {
         window.resetContactsUI();
         window.fetchAndRenderContacts();
       } else {
-        let errText = 'Ошибка сохранения контакта';
+        let errText = 'Помилка збереження контакту';
         try {
           const err = await resp.json();
           if (err.detail) {
             if (Array.isArray(err.detail)) {
-              // FastAPI валидация
+              // FastAPI валідація
               errText = err.detail.map(e => {
                 let loc = Array.isArray(e.loc) ? e.loc.join('.') : '';
                 return `${e.msg}${loc ? ` [${loc}]` : ''}`;
@@ -429,12 +429,12 @@ if (createForm) {
         alert(errText);
       }
     } catch (e) {
-      alert('Ошибка сети: ' + (e.message || ''));
+      alert('Помилка мережі: ' + (e.message || ''));
     }
   });
 }
 
-// Подтверждение удаления
+// Підтвердження видалення
 const btnDelete = document.getElementById('btn-confirm-delete');
 if (btnDelete) {
   btnDelete.addEventListener('click', async function() {
@@ -447,15 +447,15 @@ if (btnDelete) {
         window.resetContactsUI();
         window.fetchAndRenderContacts();
       } else {
-        alert('Ошибка удаления');
+        alert('Помилка видалення');
       }
     } catch {
-      alert('Ошибка сети');
+      alert('Помилка мережі');
     }
   });
 }
 
-// --- API link copy & goto logic + динамическое обновление ---
+// --- API link copy & goto logic + динамічне оновлення ---
 function updateApiLink(link) {
   const apiLink = document.getElementById('api-link');
   if (apiLink) {
@@ -464,12 +464,12 @@ function updateApiLink(link) {
   }
 }
 
-// Для режима просмотра отдельного контакта
+// Для режиму перегляду окремого контакту
 function showApiLinkForContact(id) {
   updateApiLink(`/contacts/${id}`);
 }
 
-// Для общего списка, поиска, сортировки, дней рождения
+// Для загального списку, пошуку, сортування, днів народження
 function showApiLinkForList({search, dir, birthdayMode, birthdayType}) {
   let link = '/contacts';
   const params = [];
@@ -483,7 +483,7 @@ function showApiLinkForList({search, dir, birthdayMode, birthdayType}) {
   updateApiLink(link);
 }
 
-// Исправляем формирование url для fetch
+// Виправляємо формування url для fetch
 function buildContactsUrl({search, dir, birthdayMode, birthdayType}) {
   let url = '/contacts';
   const params = [];
@@ -497,7 +497,7 @@ function buildContactsUrl({search, dir, birthdayMode, birthdayType}) {
   return url;
 }
 
-// --- UI: поиск и сортировка контактов ---
+// --- UI: пошук і сортування контактів ---
 document.addEventListener('DOMContentLoaded', function() {
   console.log('Контакты JS загружен');
   const searchInput = document.getElementById('contact-search');
@@ -511,14 +511,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
   function fetchAndRenderContactsInner() {
     if (typeof renderContactTile !== 'function') {
-      contactsList.innerHTML = '<div style="color:red">Ошибка: renderContactTile не определена</div>';
+      contactsList.innerHTML = '<div style="color:red">Помилка: renderContactTile не визначена</div>';
       console.error('renderContactTile не определена');
       return;
     }
     const url = buildContactsUrl({search: currentSearch, dir: currentDir, birthdayMode, birthdayType: 'next7days'});
     fetch(url)
       .then(r => {
-        if (!r.ok) throw new Error('Ошибка загрузки контактов');
+        if (!r.ok) throw new Error('Помилка завантаження контактів');
         return r.json();
       })
       .then(data => {
@@ -565,12 +565,12 @@ document.addEventListener('DOMContentLoaded', function() {
                   });
                 })
                 .catch(() => {
-                  html += '<div style="color:red">Ошибка загрузки наступних Днів Народження</div>';
+                  html += '<div style="color:red">Помилка завантаження наступних Днів Народження</div>';
                   contactsList.innerHTML = html;
                 });
             })
             .catch(() => {
-              contactsList.innerHTML = '<div style="color:red">Ошибка загрузки найближчих Днів Народження</div>';
+              contactsList.innerHTML = '<div style="color:red">Помилка завантаження найближчих Днів Народження</div>';
             });
           return;
         }
@@ -579,18 +579,18 @@ document.addEventListener('DOMContentLoaded', function() {
         } else if (data.contacts) {
           contactsList.innerHTML = data.contacts.map(renderContactTile).join('');
         } else {
-          contactsList.innerHTML = '<div>Нет контактов</div>';
+          contactsList.innerHTML = '<div>Немає контактів</div>';
         }
         showApiLinkForList({search: currentSearch, dir: currentDir, birthdayMode, birthdayType: 'next7days'});
       })
       .catch(err => {
-        contactsList.innerHTML = `<div style='color:red'>Ошибка загрузки: ${err.message}</div>`;
+        contactsList.innerHTML = `<div style='color:red'>Помилка завантаження: ${err.message}</div>`;
       });
   }
 
-// --- Глобальный сброс фильтров и UI контактов ---
+// --- Глобальне скидання фільтрів і UI контактів ---
 window.resetContactsUI = function() {
-  // Сбросить поиск
+  // Скинути пошук
   const searchInput = document.getElementById('contact-search');
   if (searchInput) searchInput.value = '';
   // Сбросить сортировку
@@ -602,7 +602,7 @@ window.resetContactsUI = function() {
   if (typeof birthdayMode !== 'undefined') birthdayMode = false;
 };
 
-// --- Для глобального обновления контактов после операций с БД ---
+// --- Для глобального оновлення контактів після операцій з БД ---
 window.fetchAndRenderContacts = function() {
   if (typeof fetchAndRenderContactsInner === 'function') fetchAndRenderContactsInner();
 };
@@ -636,7 +636,7 @@ window.fetchAndRenderContacts = function() {
   fetchAndRenderContactsInner();
 });
 
-// --- конец UI: поиск и сортировка контактов ---
+// --- кінець UI: пошук і сортування контактів ---
 
 // --- API link copy & goto logic ---
 document.addEventListener('DOMContentLoaded', function() {

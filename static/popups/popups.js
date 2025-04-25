@@ -1,6 +1,6 @@
-// JS для попапов
+// JS для попапів
 
-// Универсальные функции для попапов
+// Універсальні функції для попапів
 function openPopup(id) {
   document.querySelectorAll('.popup').forEach(p => {
     p.style.display = 'none';
@@ -10,7 +10,7 @@ function openPopup(id) {
   const popup = document.getElementById(id);
   if (popup) {
     popup.style.display = 'block';
-    // Фокус на первое поле
+    // Фокус на перше поле
     setTimeout(() => {
       const firstInput = popup.querySelector('input,textarea');
       if (firstInput) firstInput.focus();
@@ -24,23 +24,23 @@ function closePopup(id) {
     popup.style.display = 'none';
     const form = popup.querySelector('form');
     if (form) form.reset();
-    // Очистка динамических телефонов и групп
+    // Очищення динамічних телефонів і груп
     if (document.getElementById('phones-list')) document.getElementById('phones-list').innerHTML = '';
     if (document.getElementById('groups-list')) document.getElementById('groups-list').innerHTML = '';
     if (document.querySelector('[name="groups"]')) document.querySelector('[name="groups"]').value = '';
   }
 }
 
-// Динамические телефоны
+// Динамічні телефони
 const phonesList = document.getElementById('phones-list');
-const addPhoneBtn = document.getElementById('add-phone-btn'); // Только одно объявление!
+const addPhoneBtn = document.getElementById('add-phone-btn'); // Тільки одне оголошення!
 const phoneTypes = ['Мобільний', 'Домашній', 'Робочий', 'Інший'];
 function addPhoneRow(value = '', type = 'Мобільний') {
   if (!phonesList) return;
   const idx = phonesList.children.length;
   const row = document.createElement('div');
   row.className = 'phone-row';
-  // Исправленный pattern для всех браузеров
+  // Виправлений pattern для всіх браузерів
   row.innerHTML = `<div class='phone-input-wrap form-field'><input class='phone-input' type='tel' pattern='[0-9()+#* -]{2,31}' minlength='2' maxlength='31' inputmode='tel' value='${value}' placeholder='номер телефону' required><div class='phone-error field-error' data-field='phone_${idx}'></div></div><select class='phone-type'>${phoneTypes.map(t => `<option${t===type?' selected':''}>${t}</option>`).join('')}</select><button type='button' class='remove-phone-btn' title='Видалити'>✕</button>`;
   row.querySelector('.remove-phone-btn').onclick = () => row.remove();
   phonesList.appendChild(row);
@@ -49,7 +49,7 @@ if (addPhoneBtn) {
   addPhoneBtn.onclick = () => addPhoneRow();
 }
 
-// Кастомная inline-валидация для телефона и других полей
+// Кастомна inline-валідація для телефону та інших полів
 function showPhoneError(input) {
   const errorDiv = input.parentElement.querySelector('.phone-error, .field-error');
   if (input.validity.valueMissing) {
@@ -101,7 +101,7 @@ document.addEventListener('blur', function(e) {
   }
 }, true);
 
-// Динамические группы (UI-заготовка)
+// Динамічні групи (UI-заготовка)
 const groupsList = document.getElementById('groups-list');
 const addGroupBtn = document.getElementById('add-group-btn');
 const groupVariants = ['Сімʼя', 'Друзі', 'Робота', 'Спорт', 'Інше'];
@@ -125,7 +125,7 @@ function updateGroupsInput() {
 }
 if (addGroupBtn) {
   addGroupBtn.onclick = () => {
-    // UI: показать дропдаун, пока просто prompt
+    // UI: показати дропдаун, поки просто prompt
     const name = prompt('Назва групи', groupVariants[0]);
     if (name && !Array.from(groupsList.children).some(l => l.textContent.includes(name))) {
       addGroupLabel(name);
@@ -133,7 +133,7 @@ if (addGroupBtn) {
   };
 }
 
-// Аватар-ромб: буква имени
+// Аватар-ромб: буква імені
 const firstNameInput = document.querySelector('[name="first_name"]');
 const avatarLetter = document.getElementById('contact-avatar-letter');
 if (firstNameInput && avatarLetter) {
@@ -142,13 +142,13 @@ if (firstNameInput && avatarLetter) {
   });
 }
 
-// === Обработка ошибок формы контакта ===
+// === Обробка помилок форми контакту ===
 function showFieldError(field, message) {
   const errorDiv = document.querySelector('.field-error[data-field="' + field + '"]');
   if (errorDiv) {
     errorDiv.textContent = message;
     errorDiv.classList.add('active');
-    // Подсветить поле
+    // Підсвітити поле
     const input = document.querySelector('[name="' + field + '"]');
     if (input) input.classList.add('invalid-field');
   }
@@ -158,7 +158,7 @@ function clearFieldError(field) {
   if (errorDiv) {
     errorDiv.textContent = '';
     errorDiv.classList.remove('active');
-    // Убрать подсветку
+    // Прибрати підсвітку
     const input = document.querySelector('[name="' + field + '"]');
     if (input) input.classList.remove('invalid-field');
   }
@@ -167,19 +167,19 @@ function clearAllFieldErrors() {
   document.querySelectorAll('.field-error').forEach(div => {div.textContent = '';div.classList.remove('active');});
   document.querySelectorAll('.invalid-field').forEach(i => i.classList.remove('invalid-field'));
 }
-// Очистка ошибок при вводе
+// Очищення помилок при введенні
 ['input','change'].forEach(evt => {
   document.addEventListener(evt, function(e) {
     if (e.target.name) clearFieldError(e.target.name);
   });
 });
-// Перехват сабмита формы контакта
+// Перехоплення сабміту форми контакту
 const contactForm = document.getElementById('create-contact-form');
 if (contactForm) {
   contactForm.addEventListener('submit', async function(e) {
     e.preventDefault();
     clearAllFieldErrors();
-    // HTML5 валидация
+    // HTML5 валідація
     if (!contactForm.checkValidity()) {
       Array.from(contactForm.elements).forEach(el => {
         if (!el.validity.valid) {
@@ -191,12 +191,12 @@ if (contactForm) {
       return;
     }
     const formData = new FormData(contactForm);
-    // Собираем телефоны
+    // Збираємо телефони
     const phones = Array.from(document.querySelectorAll('.phone-row .phone-input')).map(input => ({number: input.value, type: input.closest('.phone-row').querySelector('.phone-type').value}));
     formData.delete('phones');
-    // Собираем группы
+    // Збираємо групи
     const groups = document.querySelector('[name="groups"]').value;
-    // Формируем payload
+    // Формуємо payload
     const payload = Object.fromEntries(formData.entries());
     payload.phone_numbers = phones;
     payload.groups = groups;
@@ -208,7 +208,7 @@ if (contactForm) {
       });
       const data = await resp.json();
       if (!resp.ok) {
-        // Обработка ошибок валидации
+        // Обробка помилок валідації
         if (data.detail) {
           if (Array.isArray(data.detail)) {
             data.detail.forEach(err => {
@@ -220,14 +220,14 @@ if (contactForm) {
           }
         }
       } else {
-        // Успех: закрыть попап, сбросить форму и ошибки
+        // Успіх: закрити попап, скинути форму і помилки
         contactForm.reset();
         clearAllFieldErrors();
         closePopup('popup-create-contact');
-        // Можно обновить список контактов
+        // Можна оновити список контактів
       }
     } catch (err) {
-      showFieldError('form', 'Ошибка сети, попробуйте еще раз.');
+      showFieldError('form', 'Помилка мережі, спробуйте ще раз.');
     }
   });
 }
