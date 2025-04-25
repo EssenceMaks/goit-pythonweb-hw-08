@@ -468,19 +468,66 @@ document.addEventListener('DOMContentLoaded', function() {
       if (currentSort === 'alpha') url += `sort=${currentDir}`;
     }
     fetch(url)
-      .then(r => r.json())
+      .then(r => {
+        if (!r.ok) throw new Error('Ошибка загрузки контактов');
+        return r.json();
+      })
       .then(data => {
+        if (birthdayMode) {
+          // --- Ближайшие 7 дней ---
+          fetch('/contacts/birthdays/next7days')
+            .then(r => r.json())
+            .then(data7 => {
+              let html = '<div><b>Найближчі 7 днів Дні Народження будуть у:</b></div>';
+              if (!Array.isArray(data7) || data7.length === 0) {
+                html += '<div style="margin:1em 0;">контактів не знайдено</div>';
+              } else {
+                html += '<ul>' + data7.map(c => `<li>${c.first_name} ${c.last_name || ''} (${c.birthday || ''})</li>`).join('') + '</ul>';
+              }
+              html += '<hr style="margin:1em 0;">';
+              html += '<div><b>Наступні найближчі Дні Народженя:</b></div>';
+        
+              // --- Ближайшие 12 месяцев ---
+              fetch('/contacts/birthdays/next12months')
+                .then(r => r.json())
+                .then(data12 => {
+                  if (Array.isArray(data12) && data12.length > 0) {
+                    const months = {};
+                    data12.forEach(c => {
+                      if (!c.birthday) return;
+                      const m = (new Date(c.birthday)).toLocaleString('uk-UA', {month: 'long'});
+                      if (!months[m]) months[m] = [];
+                      months[m].push(c);
+                    });
+                    Object.keys(months).forEach(month => {
+                      html += `<div style="margin-top:1em;"><b>${month}:</b></div>`;
+                      html += '<ul>' + months[month].map(c => `<li>${c.first_name} ${c.last_name || ''} (${c.birthday || ''})</li>`).join('') + '</ul>';
+                    });
+                  } else {
+                    html += '<div style="margin:1em 0;">немає контактів</div>';
+                  }
+                  contactsList.innerHTML = html;
+                })
+                .catch(() => {
+                  html += '<div style="color:red">Ошибка загрузки наступних Днів Народження</div>';
+                  contactsList.innerHTML = html;
+                });
+            })
+            .catch(() => {
+              contactsList.innerHTML = '<div style="color:red">Ошибка загрузки найближчих Днів Народження</div>';
+            });
+          return;
+        }
         if (Array.isArray(data)) {
           contactsList.innerHTML = data.map(renderContactTile).join('');
         } else if (data.contacts) {
           contactsList.innerHTML = data.contacts.map(renderContactTile).join('');
         } else {
-          contactsList.innerHTML = '<div class="empty-msg">Нічого не знайдено</div>';
+          contactsList.innerHTML = '<div>Нет контактов</div>';
         }
       })
       .catch(err => {
-        contactsList.innerHTML = '<div style="color:red">Ошибка загрузки контактов</div>';
-        console.error('Ошибка загрузки:', err);
+        contactsList.innerHTML = `<div style='color:red'>Ошибка загрузки: ${err.message}</div>`;
       });
   }
 

@@ -1,8 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import extract, and_, or_
 from typing import List
 import crud, models, schemas
 from database import SessionLocal
+from datetime import date, timedelta
 import logging
 
 router = APIRouter(prefix="/contacts", tags=["Contacts"])
@@ -52,19 +54,44 @@ def search_contacts(query: str, db: Session = Depends(get_db)):
 def get_upcoming_birthdays(db: Session = Depends(get_db)):
     return crud.contacts_with_upcoming_birthdays(db)
 
+
+def birthday_md_expr():
+    return extract('month', models.Contact.birthday) * 100 + extract('day', models.Contact.birthday)
+
 @router.get("/birthdays/next7days", response_model=List[schemas.Contact])
 def get_upcoming_birthdays_next7days(db: Session = Depends(get_db)):
-    from datetime import date, timedelta
     today = date.today()
     in_seven_days = today + timedelta(days=7)
-    contacts = db.query(models.Contact).filter(models.Contact.birthday.isnot(None)).all()
-    result = []
-    for c in contacts:
-        if c.birthday:
-            bday_this_year = c.birthday.replace(year=today.year)
-            if today <= bday_this_year <= in_seven_days:
-                result.append(c)
-    return result
+    today_md = today.month * 100 + today.day
+    in_seven_days_md = in_seven_days.month * 100 + in_seven_days.day
+
+    if today_md <= in_seven_days_md:
+        contacts = db.query(models.Contact).filter(
+            models.Contact.birthday.isnot(None),
+            birthday_md_expr().between(today_md, in_seven_days_md)
+        ).all()
+    else:
+        contacts = db.query(models.Contact).filter(
+            models.Contact.birthday.isnot(None),
+            or_(
+                birthday_md_expr().between(today_md, 1231),
+                birthday_md_expr().between(101, in_seven_days_md)
+            )
+        ).all()
+    return contacts
+
+@router.get("/birthdays/next12months", response_model=List[schemas.Contact])
+def get_birthdays_next_12_months(db: Session = Depends(get_db)):
+    today = date.today()
+    today_md = today.month * 100 + today.day
+    contacts = db.query(models.Contact).filter(
+        models.Contact.birthday.isnot(None),
+        birthday_md_expr() >= today_md
+    ).order_by(
+        extract('month', models.Contact.birthday),
+        extract('day', models.Contact.birthday)
+    ).all()
+    return contacts
 
 @router.get("/{contact_id}", response_model=schemas.Contact)
 def read_contact(contact_id: int, db: Session = Depends(get_db)):
