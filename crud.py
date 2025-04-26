@@ -6,8 +6,20 @@ from sqlalchemy.exc import IntegrityError
 
 # CONTACTS CRUD
 
+from sqlalchemy.orm import joinedload
+
 def get_contact(db: Session, contact_id: int):
-    return db.query(models.Contact).filter(models.Contact.id == contact_id).first()
+    return (
+        db.query(models.Contact)
+        .options(
+            joinedload(models.Contact.phone_numbers),
+            joinedload(models.Contact.avatars),
+            joinedload(models.Contact.photos),
+            joinedload(models.Contact.groups),
+        )
+        .filter(models.Contact.id == contact_id)
+        .first()
+    )
 
 def get_contacts(db: Session, skip: int = 0, limit: int = 100):
     return db.query(models.Contact).offset(skip).limit(limit).all()

@@ -38,83 +38,459 @@ function collapseAllContacts() {
   });
 }
 
+// Универсальный обработчик для раскрытия/сворачивания контакта и выхода из birthdayMode
+// Теперь birthdayMode можно сбросить только по клику вне шаблона дней рожденья или по спец. кнопке
+
 document.addEventListener('click', async function(e) {
-  const tile = e.target.closest('.contact-tile');
-  if (!tile) {
-    collapseAllContacts();
+  // Если активен birthdayMode, разрешаем только клик по .show-info-btn или по кнопке выхода
+  if (birthdayMode) {
+    if (e.target.classList.contains('show-info-btn')) return;
+    if (e.target.classList.contains('exit-birthday-btn')) {
+      birthdayMode = false;
+      expandedContactId = null;
+      document.querySelectorAll('#contacts-views button').forEach(btn => btn.classList.remove('active-birthday-btn'));
+      renderContacts();
+      return;
+    }
+    // Клик вне шаблона дней рожденья — выйти из режима
+    if (!e.target.closest('#contacts-list')) {
+      birthdayMode = false;
+      expandedContactId = null;
+      document.querySelectorAll('#contacts-views button').forEach(btn => btn.classList.remove('active-birthday-btn'));
+      renderContacts();
+      return;
+    }
+    // Внутри birthdayMode ничего не делаем
     return;
   }
-  if (!tile.classList.contains('expanded')) {
-    collapseAllContacts();
-    tile.classList.add('expanded');
-    tile.querySelector('.contact-tile-actions').style.display = 'flex';
-    tile.querySelector('.contact-tile-extra').style.display = 'block';
-    const id = tile.dataset.id;
-    if (id) {
-      try {
-        const resp = await fetch(`/contacts/${id}`);
-        if (resp.ok) {
-          const contact = await resp.json();
-          const phones = contact.phone_numbers ? contact.phone_numbers.slice(1).map(p => p.number || p).join(', ') : '';
-          tile.querySelector('.contact-tile-phones-additional').innerText = phones ? 'Ще телефони: ' + phones : '';
-          let preview = (contact.extra_info || '').split(/\s+/).slice(0,8).join(' ');
-          if (preview.length > 32) preview = preview.slice(0,32) + '...';
-          tile.querySelector('.contact-tile-extra-preview').innerText = preview;
-        }
-      } catch {}
-    }
+  const tile = e.target.closest('.contact-tile');
+  if (!tile) {
+    expandedContactId = null;
+    renderContacts();
+    return;
   }
+  const id = tile.dataset.id;
+  if (contactsViewMode === 4) return;
+  if (expandedContactId === id) {
+    expandedContactId = null;
+  } else {
+    expandedContactId = id;
+  }
+  renderContacts();
 });
 
-function renderContactTile(contact) {
-  const firstLetter = contact.first_name ? contact.first_name[0].toUpperCase() : '?';
-  const colorClasses = [
-    'color-1', 'color-2', 'color-3', 'color-4',
-    'color-5', 'color-6', 'color-7', 'color-8'
-  ];
-  const colorIndex = firstLetter.charCodeAt(0) % colorClasses.length;
-  const tileClass = 'tile-' + colorClasses[colorIndex];
-  const borderClass = 'border-' + colorClasses[colorIndex];
-  return `
-    <div class="contact-tile ${tileClass}" data-id="${contact.id}">
-      <div class="contact-tile-border ${borderClass}"></div>
-      <div class="contact-tile-grid">
-        <div class="contact-avatar-diamond"><span>${firstLetter}</span></div>
-        <div class="contact-tile-info">
-          <div class="contact-tile-name">${contact.first_name} ${contact.last_name || ''}</div>
-          <div class="contact-tile-birth">${contact.birthday || ''}</div>
-          <div class="contact-tile-email">${contact.email}</div>
-          <div class="contact-tile-phone">${Array.isArray(contact.phone_numbers) && contact.phone_numbers.length ? (contact.phone_numbers[0].number || contact.phone_numbers[0]) : '-'}</div>
-        </div>
-      </div>
-      <div class="contact-tile-actions" style="display:none;">
-        <button class="edit-contact" data-id="${contact.id}">Редагувати</button>
-        <button class="delete-contact" data-id="${contact.id}">Видалити</button>
-        <button class="details-contact" data-id="${contact.id}">Деталі</button>
-      </div>
-      <div class="contact-tile-extra" style="display:none;">
-        <div class="contact-tile-phones-additional"></div>
-        <div class="contact-tile-extra-preview"></div>
-      </div>
-    </div>
-  `;
-}
+// Удалена дублирующая функция renderContactTile (используйте только renderContactTile с viewMode)
+// function renderContactTile(contact) {
+// ...удалено как дубликат и невалидный остаток...
 
-async function loadContacts() {
-  const list = document.getElementById('contacts-list');
-  list.innerHTML = '<div>Завантаження...</div>';
-  try {
-    const resp = await fetch('/contacts');
-    const data = await resp.json();
-    if (Array.isArray(data) && data.length > 0) {
-      list.innerHTML = data.map(renderContactTile).join('');
-    } else {
-      list.innerHTML = '<div>Немає контактів</div>';
+
+let contactsViewMode = 2; // Дефолтний режим
+let alphaSortDir = 'asc'; // глобальне напрям сортування
+let expandedContactId = null; // id индивидуально раскрытого контакта
+let birthdayMode = false; // глобальный режим дней рождений
+let contactsCache = []; // Глобальный кэш контактов
+
+// --- Перемикач вигляду контактів ---
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.contacts-view-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      contactsViewMode = +btn.dataset.view;
+      // expandedContactIds = []; // удалено как неиспользуемое
+      if (birthdayMode) return;
+      expandedContactId = null;
+      const search = searchInput.value.trim();
+      fetchAndRenderContactsInner({search, dir: alphaSortDir});
+    });
+  });
+  // Добавить кнопку сортировки (стрелка вверх/вниз), только если её нет
+  // Использовать #contacts-views как контейнер для кнопок состояний
+  let globalSortBtn = document.getElementById('global-alpha-sort');
+  const viewSwitcher = document.getElementById('contacts-views');
+  if (viewSwitcher && !globalSortBtn) {
+    globalSortBtn = document.createElement('button');
+    globalSortBtn.id = 'global-alpha-sort';
+    globalSortBtn.title = 'Сортировать по алфавиту';
+    globalSortBtn.innerHTML = '<span id="alpha-arrow">\u25B2</span>';
+    globalSortBtn.style.marginLeft = '0.5em';
+    globalSortBtn.style.fontSize = '1.2em';
+    globalSortBtn.style.verticalAlign = 'middle';
+    globalSortBtn.addEventListener('click', function() {
+      alphaSortDir = (alphaSortDir === 'asc' ? 'desc' : 'asc');
+      document.getElementById('alpha-arrow').textContent = (alphaSortDir === 'asc' ? '\u25B2' : '\u25BC');
+      if (birthdayMode) return;
+      expandedContactId = null;
+      const search = searchInput.value.trim();
+      const url = buildContactsUrl({search, dir: alphaSortDir, birthdayMode: false});
+      updateApiLink(url);
+      fetchAndRenderContactsInner({search, dir: alphaSortDir});
+    });
+    viewSwitcher.appendChild(globalSortBtn);
+  }
+  // --- Добавить кнопку 7dayBirthDayS ---
+  if (viewSwitcher && !document.getElementById('btn-7day-birthdays')) {
+    const birthdayBtn = document.createElement('button');
+    birthdayBtn.id = 'btn-7day-birthdays';
+    birthdayBtn.textContent = '7dayBirthDayS';
+    birthdayBtn.style.marginLeft = '0.5em';
+    birthdayBtn.style.fontWeight = 'bold';
+    birthdayBtn.addEventListener('click', function() {
+      // Визуальное выделение
+      document.querySelectorAll('#contacts-views button').forEach(btn => btn.classList.remove('active-birthday-btn'));
+      birthdayBtn.classList.add('active-birthday-btn');
+      // Запуск шаблона дней рождений
+      fetchAndRenderBirthdaysTemplate();
+    });
+    viewSwitcher.appendChild(birthdayBtn);
+  }
+
+  // Корректно интегрировать поле поиска внутрь #contacts-views, чтобы оно был первым элементом
+  let searchInput = document.getElementById('contact-search');
+  if (searchInput) {
+    searchInput.remove(); // удалить старое поле, если было
+  }
+  searchInput = document.createElement('input');
+  searchInput.type = 'text';
+  searchInput.id = 'contact-search';
+  searchInput.className = 'contact-search';
+  searchInput.placeholder = 'Пошук...';
+  searchInput.setAttribute('autocomplete', 'off');
+  searchInput.style.marginRight = '1em';
+  searchInput.style.maxWidth = '180px';
+  const viewsBlock = document.getElementById('contacts-views');
+  if (viewsBlock) {
+    viewsBlock.insertBefore(searchInput, viewsBlock.firstChild);
+  } else {
+    document.body.insertBefore(searchInput, document.body.firstChild);
+  }
+  // Новый обработчик поиска
+  searchInput.addEventListener('input', function() {
+    contactsViewMode = 3;
+    // expandedContactIds = []; // удалено как неиспользуемое
+    birthdayMode = false;
+    const search = searchInput.value.trim();
+    fetchAndRenderContactsInner({search, dir: alphaSortDir, birthdayMode: false});
+  });
+  // Сразу при загрузке показать актуальный url
+  setTimeout(() => {
+    const search = searchInput.value.trim();
+    let url = '/contacts?sort=' + encodeURIComponent(alphaSortDir);
+    if (search) url += '&search=' + encodeURIComponent(search);
+    const apiLink = document.getElementById('api-link');
+    if (apiLink) {
+      apiLink.href = url;
+      apiLink.textContent = url;
     }
-  } catch (e) {
-    list.innerHTML = '<div>Помилка завантаження</div>';
+  }, 0);
+  // Кнопка копирования и перехода по ссылке
+  const copyBtn = document.getElementById('copy-api-link');
+  const gotoBtn = document.getElementById('goto-api-link');
+  const copySuccess = document.getElementById('copy-success');
+  // Получаем apiLink здесь
+  const apiLink = document.getElementById('api-link');
+  if (copyBtn && apiLink) {
+    copyBtn.onclick = function() {
+      navigator.clipboard.writeText(apiLink.href).then(() => {
+        if (copySuccess) {
+          copySuccess.style.display = 'inline';
+          setTimeout(() => { copySuccess.style.display = 'none'; }, 1200);
+        }
+      });
+    };
+  }
+  if (gotoBtn && apiLink) {
+    gotoBtn.onclick = function() {
+      window.open(apiLink.href, '_blank');
+    };
+  }
+  // Сортування: скинути expandedContactIds для всіх sort-btn
+  document.querySelectorAll('.sort-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      // expandedContactIds = []; // удалено как неиспользуемое
+      renderContacts();
+    });
+  });
+  const sortSelect = document.getElementById('contacts-sort-select');
+  if (sortSelect) {
+    sortSelect.addEventListener('change', function() {
+      // expandedContactIds = []; // удалено как неиспользуемое
+      renderContacts();
+    });
+  }
+  // При загрузке страницы всегда явно режим 2
+  contactsViewMode = 2;
+  birthdayMode = false;
+  fetchAndRenderContactsInner({search: '', dir: alphaSortDir, birthdayMode: false});
+});
+
+async function fetchContacts() {
+  const search = document.getElementById('contact-search')?.value || '';
+  const params = [];
+  if (search) params.push('search=' + encodeURIComponent(search));
+  if (alphaSortDir) params.push('sort=' + encodeURIComponent(alphaSortDir));
+  params.push('limit=100');
+  const url = '/contacts' + (params.length ? '?' + params.join('&') : '');
+  try {
+    const resp = await fetch(url);
+    const data = await resp.json();
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
   }
 }
+
+async function fetchContact(id) {
+  const resp = await fetch(`/contacts/${id}`);
+  return await resp.json();
+}
+
+async function renderContacts() {
+  if (birthdayMode) return; // Не рендерить обычные контакты, если активен шаблон дней рождений
+  const list = document.getElementById('contacts-list');
+  list.innerHTML = '<div>Завантаження...</div>';
+  // Используем только кэш
+  const data = contactsCache;
+
+  let tilesHtml;
+  if (contactsViewMode === 4) {
+    // В режиме 4 — всегда показываем все expanded
+    tilesHtml = await Promise.all(data.map(async contact => {
+      const fullContact = await fetchContact(contact.id);
+      return renderFullContactTile(fullContact);
+    }));
+  } else {
+    // Для всех других режимов: если expandedContactId — раскрыть только его
+    tilesHtml = await Promise.all(data.map(async contact => {
+      if (expandedContactId && contact.id.toString() === expandedContactId) {
+        const fullContact = await fetchContact(contact.id);
+        return renderFullContactTile(fullContact);
+      } else {
+        return renderContactTile(contact, contactsViewMode);
+      }
+    }));
+  }
+  list.innerHTML = tilesHtml.join('');
+}
+
+// --- Обновление api-link-block ---
+function updateApiLink(url) {
+  const apiLink = document.getElementById('api-link');
+  if (apiLink) {
+    apiLink.href = url;
+    apiLink.textContent = url;
+  }
+}
+
+function fetchAndRenderBirthdaysTemplate() {
+  birthdayMode = true;
+  expandedContactId = null;
+  const contactsList = document.getElementById('contacts-list');
+  let html = '';
+  updateApiLink('/contacts/birthdays/next7days');
+  fetch('/contacts/birthdays/next7days')
+    .then(r => r.json())
+    .then(data7 => {
+      html += '<div><b>Найближчі 7 днів Дні Народження будуть у:</b></div>';
+      if (!Array.isArray(data7) || data7.length === 0) {
+        html += '<div style="margin:1em 0;">контактів не знайдено</div>';
+      } else {
+        html += '<ul>' + data7.map(c => `<li>${c.first_name} ${c.last_name || ''} (${c.birthday || ''}) <button class="show-info-btn" data-id="${c.id}">інфо</button></li>`).join('') + '</ul>';
+      }
+      html += '<hr style="margin:1em 0;">';
+      html += '<div><b>Наступні найближчі Дні Народженя:</b></div>';
+      fetch('/contacts/birthdays/next12months')
+        .then(r => r.json())
+        .then(data12 => {
+          if (Array.isArray(data12) && data12.length > 0) {
+            const months = {};
+            data12.forEach(c => {
+              if (!c.birthday) return;
+              const m = (new Date(c.birthday)).toLocaleString('uk-UA', {month: 'long'});
+              if (!months[m]) months[m] = [];
+              months[m].push(c);
+            });
+            Object.keys(months).forEach(month => {
+              html += `<div style="margin-top:1em;"><b>${month}:</b></div>`;
+              html += '<ul>' + months[month].map(c => `<li>${c.first_name} ${c.last_name || ''} (${c.birthday || ''}) <button class="show-info-btn" data-id="${c.id}">інфо</button></li>`).join('') + '</ul>';
+            });
+          } else {
+            html += '<div style="margin:1em 0;">немає контактів</div>';
+          }
+          contactsList.innerHTML = html;
+          contactsList.querySelectorAll('.show-info-btn').forEach(btn => {
+            btn.addEventListener('click', e => {
+              const id = btn.getAttribute('data-id');
+              if (typeof openFullContactPopup === 'function') openFullContactPopup(id);
+              updateApiLink(`/contacts/${id}`);
+            });
+          });
+        })
+        .catch(() => {
+          html += '<div style="color:red">Помилка завантаження наступних Днів Народження</div>';
+          contactsList.innerHTML = html;
+        });
+    })
+    .catch(() => {
+      contactsList.innerHTML = '<div style="color:red">Помилка завантаження найближчих Днів Народження</div>';
+    });
+}
+
+async function fetchAndRenderContactsInner({birthdayMode: localBirthdayMode = false, search = '', dir = 'asc'} = {}) {
+  // Если активен birthdayMode — не перерисовываем список контактов
+  if (localBirthdayMode) {
+    // --- Только birthday-шаблон! ---
+    let html = '';
+    updateApiLink('/contacts/birthdays/next7days');
+    fetch('/contacts/birthdays/next7days')
+      .then(r => r.json())
+      .then(data7 => {
+        html += '<div><b>Найближчі 7 днів Дні Народження будуть у:</b></div>';
+        if (!Array.isArray(data7) || data7.length === 0) {
+          html += '<div style="margin:1em 0;">контактів не знайдено</div>';
+        } else {
+          html += '<ul>' + data7.map(c => `<li>${c.first_name} ${c.last_name || ''} (${c.birthday || ''}) <button class="show-info-btn" data-id="${c.id}">інфо</button></li>`).join('') + '</ul>';
+        }
+        html += '<hr style="margin:1em 0;">';
+        html += '<div><b>Наступні найближчі Дні Народженя:</b></div>';
+        fetch('/contacts/birthdays/next12months')
+          .then(r => r.json())
+          .then(data12 => {
+            if (Array.isArray(data12) && data12.length > 0) {
+              const months = {};
+              data12.forEach(c => {
+                if (!c.birthday) return;
+                const m = (new Date(c.birthday)).toLocaleString('uk-UA', {month: 'long'});
+                if (!months[m]) months[m] = [];
+                months[m].push(c);
+              });
+              Object.keys(months).forEach(month => {
+                html += `<div style="margin-top:1em;"><b>${month}:</b></div>`;
+                html += '<ul>' + months[month].map(c => `<li>${c.first_name} ${c.last_name || ''} (${c.birthday || ''}) <button class="show-info-btn" data-id="${c.id}">інфо</button></li>`).join('') + '</ul>';
+              });
+            } else {
+              html += '<div style="margin:1em 0;">немає контактів</div>';
+            }
+            contactsList.innerHTML = html;
+            contactsList.querySelectorAll('.show-info-btn').forEach(btn => {
+              btn.addEventListener('click', e => {
+                const id = btn.getAttribute('data-id');
+                if (typeof openFullContactPopup === 'function') openFullContactPopup(id);
+                updateApiLink(`/contacts/${id}`);
+              });
+            });
+          })
+          .catch(() => {
+            html += '<div style="color:red">Помилка завантаження наступних Днів Народження</div>';
+            contactsList.innerHTML = html;
+          });
+        return;
+      })
+      .catch(() => {
+        contactsList.innerHTML = '<div style="color:red">Помилка завантаження найближчих Днів Народження</div>';
+      });
+  }
+  // --- Обычный рендер если НЕ birthdayMode ---
+  let url = buildContactsUrl({search, dir, birthdayMode: false, birthdayType: undefined});
+  updateApiLink(url);
+  const data = await fetchContacts();
+  contactsCache = data;
+  renderContacts();
+}
+
+// --- Обновление api-link-block ---
+function updateApiLink(url) {
+  const apiLink = document.getElementById('api-link');
+  if (apiLink) {
+    apiLink.href = url;
+    apiLink.textContent = url;
+  }
+}
+
+function buildContactsUrl({search, dir, birthdayMode, birthdayType}) {
+  let url = '/contacts';
+  const params = [];
+  if (birthdayMode) {
+    url = birthdayType === 'next12months' ? '/contacts/birthdays/next12months' : '/contacts/birthdays/next7days';
+  } else {
+    if (search) params.push(`search=${encodeURIComponent(search)}`);
+    if (dir) params.push(`sort=${dir}`);
+    if (params.length) url += '?' + params.join('&');
+  }
+  return url;
+}
+
+function renderContactTile(contact, viewMode) {
+  // viewMode: 1, 2, 3
+  const firstLetter = contact.first_name ? contact.first_name[0].toUpperCase() : '?';
+  if (viewMode === 1) {
+    // Только инициалы
+    return `<div class="contact-tile contact-tile-mini" data-id="${contact.id}" title="${contact.first_name} ${contact.last_name||''}">
+      <div class="contact-avatar-diamond"><span>${firstLetter}${contact.last_name ? contact.last_name[0].toUpperCase() : ''}</span></div>
+    </div>`;
+  }
+  if (viewMode === 2) {
+    // Инициалы + имя/фамилия
+    return `<div class="contact-tile contact-tile-mini" data-id="${contact.id}">
+      <div class="contact-avatar-diamond"><span>${firstLetter}${contact.last_name ? contact.last_name[0].toUpperCase() : ''}</span></div>
+      <div class="contact-tile-info">
+        <div class="contact-tile-name">${contact.first_name||''}</div>
+        <div class="contact-tile-name">${contact.last_name||''}</div>
+      </div>
+    </div>`;
+  }
+  if (viewMode === 3) {
+    // Имя, фамилия, дата, email, первый телефон
+    return `<div class="contact-tile" data-id="${contact.id}">
+      <div class="contact-avatar-diamond"><span>${firstLetter}${contact.last_name ? contact.last_name[0].toUpperCase() : ''}</span></div>
+      <div class="contact-tile-info">
+        <div class="contact-tile-name">${contact.first_name} ${contact.last_name || ''}</div>
+        <div class="contact-tile-birth">${contact.birthday || ''}</div>
+        <div class="contact-tile-email">${contact.email || ''}</div>
+        <div class="contact-tile-phone">${Array.isArray(contact.phone_numbers) && contact.phone_numbers.length ? (contact.phone_numbers[0].number || contact.phone_numbers[0]) : '-'}</div>
+      </div>
+    </div>`;
+  }
+  return '';
+}
+
+// expanded (4) — полный рендер для плитки в общем списке
+function renderFullContactTile(contact) {
+  // Почти как renderFullContact, но без отдельного шаблона
+  // В режиме 4 добавляем action-кнопки для каждой карточки
+  return `<div class="contact-tile contact-tile-expanded" data-id="${contact.id}">
+    <div class="contact-avatar-diamond"><span>${contact.first_name ? contact.first_name[0].toUpperCase() : '?'}${contact.last_name ? contact.last_name[0].toUpperCase() : ''}</span></div>
+    <div class="contact-tile-info">
+      <div class="contact-tile-name">${contact.first_name} ${contact.last_name || ''}</div>
+      <div class="contact-tile-birth">${contact.birthday || ''}</div>
+      <div class="contact-tile-email">${contact.email || ''}</div>
+      <div class="contact-tile-phone">${Array.isArray(contact.phone_numbers) && contact.phone_numbers.length ? contact.phone_numbers.map(pn => `${pn.number} (${pn.label||pn.type||''})`).join(', ') : '-'}</div>
+      <div class="contact-tile-groups">${Array.isArray(contact.groups) && contact.groups.length ? contact.groups.map(gr => gr.name || gr).join(', ') : '-'}</div>
+      <div class="contact-tile-extra-info">${contact.extra_info || ''}</div>
+      <div class="contact-tile-id">ID: ${contact.id}</div>
+      <div class="contact-tile-actions" style="display:flex;margin-top:8px;gap:7px;">
+        <button class="details-contact" data-id="${contact.id}">Інформація</button>
+        <button class="edit-contact" data-id="${contact.id}">Редагувати</button>
+        <button class="delete-contact" data-id="${contact.id}">Видалити</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// --- Клик по плитке: трансформация в expanded (4) или возврат в глобальное состояние ---
+document.addEventListener('click', function(e) {
+  const tile = e.target.closest('.contact-tile');
+  if (tile) {
+    const id = tile.dataset.id;
+    if (!id) return;
+    if (expandedContactId === id) {
+      // Если уже expanded — убрать из expandedContactIds
+      expandedContactId = null;
+    } else {
+      // Добавить в expandedContactIds
+      expandedContactId = id;
+    }
+    renderContacts();
+  }
+});
 
 // --- кінець island-контактів ---
 
@@ -503,142 +879,88 @@ document.addEventListener('DOMContentLoaded', function() {
   const searchInput = document.getElementById('contact-search');
   const sortAlphaBtn = document.getElementById('sort-alpha');
   const sortBirthdayBtn = document.getElementById('sort-birthday');
-  const contactsList = document.getElementById('contacts-list');
+  const globalSortBtn = document.getElementById('global-alpha-sort');
 
   let currentSearch = '';
-  let currentDir = 'asc';
-  let birthdayMode = false;
+  // birthdayMode, contactsCache, alphaSortDir — глобальные
 
-  function fetchAndRenderContactsInner() {
-    if (typeof renderContactTile !== 'function') {
-      contactsList.innerHTML = '<div style="color:red">Помилка: renderContactTile не визначена</div>';
-      console.error('renderContactTile не определена');
-      return;
-    }
-    const url = buildContactsUrl({search: currentSearch, dir: currentDir, birthdayMode, birthdayType: 'next7days'});
-    fetch(url)
-      .then(r => {
-        if (!r.ok) throw new Error('Помилка завантаження контактів');
-        return r.json();
-      })
-      .then(data => {
-        if (birthdayMode) {
-          // --- Ближайшие 7 дней ---
-          fetch('/contacts/birthdays/next7days')
-            .then(r => r.json())
-            .then(data7 => {
-              let html = '<div><b>Найближчі 7 днів Дні Народження будуть у:</b></div>';
-              if (!Array.isArray(data7) || data7.length === 0) {
-                html += '<div style="margin:1em 0;">контактів не знайдено</div>';
-              } else {
-                html += '<ul>' + data7.map(c => `<li>${c.first_name} ${c.last_name || ''} (${c.birthday || ''}) <button class="show-info-btn" data-id="${c.id}">інфо</button></li>`).join('') + '</ul>';
-              }
-              html += '<hr style="margin:1em 0;">';
-              html += '<div><b>Наступні найближчі Дні Народженя:</b></div>';
-        
-              // --- Ближайшие 12 месяцев ---
-              fetch('/contacts/birthdays/next12months')
-                .then(r => r.json())
-                .then(data12 => {
-                  if (Array.isArray(data12) && data12.length > 0) {
-                    const months = {};
-                    data12.forEach(c => {
-                      if (!c.birthday) return;
-                      const m = (new Date(c.birthday)).toLocaleString('uk-UA', {month: 'long'});
-                      if (!months[m]) months[m] = [];
-                      months[m].push(c);
-                    });
-                    Object.keys(months).forEach(month => {
-                      html += `<div style="margin-top:1em;"><b>${month}:</b></div>`;
-                      html += '<ul>' + months[month].map(c => `<li>${c.first_name} ${c.last_name || ''} (${c.birthday || ''}) <button class="show-info-btn" data-id="${c.id}">інфо</button></li>`).join('') + '</ul>';
-                    });
-                  } else {
-                    html += '<div style="margin:1em 0;">немає контактів</div>';
-                  }
-                  contactsList.innerHTML = html;
-                  // Навесить обработчик на все кнопки инфо
-                  contactsList.querySelectorAll('.show-info-btn').forEach(btn => {
-                    btn.addEventListener('click', e => {
-                      const id = btn.getAttribute('data-id');
-                      if (typeof openFullContactPopup === 'function') openFullContactPopup(id);
-                    });
-                  });
-                })
-                .catch(() => {
-                  html += '<div style="color:red">Помилка завантаження наступних Днів Народження</div>';
-                  contactsList.innerHTML = html;
-                });
-            })
-            .catch(() => {
-              contactsList.innerHTML = '<div style="color:red">Помилка завантаження найближчих Днів Народження</div>';
-            });
-          return;
-        }
-        if (Array.isArray(data)) {
-          contactsList.innerHTML = data.map(renderContactTile).join('');
-        } else if (data.contacts) {
-          contactsList.innerHTML = data.contacts.map(renderContactTile).join('');
-        } else {
-          contactsList.innerHTML = '<div>Немає контактів</div>';
-        }
-        showApiLinkForList({search: currentSearch, dir: currentDir, birthdayMode, birthdayType: 'next7days'});
-      })
-      .catch(err => {
-        contactsList.innerHTML = `<div style='color:red'>Помилка завантаження: ${err.message}</div>`;
-      });
-  }
-
-// --- Глобальне скидання фільтрів і UI контактів ---
-window.resetContactsUI = function() {
-  // Скинути пошук
-  const searchInput = document.getElementById('contact-search');
+  // Сбросить поиск и сортировку при инициализации
   if (searchInput) searchInput.value = '';
-  // Сбросить сортировку
-  const sortAlphaBtn = document.getElementById('sort-alpha');
   if (sortAlphaBtn) sortAlphaBtn.textContent = 'Алфавітний порядок ↑';
-  // Сбросить режимы
-  if (typeof currentSearch !== 'undefined') currentSearch = '';
-  if (typeof currentDir !== 'undefined') currentDir = 'asc';
-  if (typeof birthdayMode !== 'undefined') birthdayMode = false;
-};
+  currentSearch = '';
+  alphaSortDir = 'asc';
+  birthdayMode = false;
 
-// --- Для глобального оновлення контактів після операцій з БД ---
-window.fetchAndRenderContacts = function() {
-  if (typeof fetchAndRenderContactsInner === 'function') fetchAndRenderContactsInner();
-};
+  async function fetchAndRenderContactsInnerUI({search = ''} = {}) {
+    if (birthdayMode) return;
+    let url = '/contacts?sort=' + encodeURIComponent(alphaSortDir);
+    if (search) url += '&search=' + encodeURIComponent(search);
+    updateApiLink(url);
+    const data = await fetchContacts();
+    contactsCache = data;
+    renderContacts();
+  }
 
   if (searchInput) {
     searchInput.addEventListener('input', e => {
+      if (birthdayMode) return;
       currentSearch = e.target.value.trim();
-      birthdayMode = false;
-      fetchAndRenderContactsInner();
+      fetchAndRenderContactsInnerUI({search: currentSearch});
     });
   }
 
   if (sortAlphaBtn) {
     sortAlphaBtn.addEventListener('click', () => {
-      birthdayMode = false;
-      currentDir = currentDir === 'asc' ? 'desc' : 'asc';
-      sortAlphaBtn.textContent = `Алфавітний порядок ${currentDir === 'asc' ? '↑' : '↓'}`;
-      fetchAndRenderContactsInner();
-      showApiLinkForList({search: currentSearch, dir: currentDir, birthdayMode, birthdayType: undefined});
+      if (birthdayMode) return;
+      alphaSortDir = (alphaSortDir === 'asc' ? 'desc' : 'asc');
+      sortAlphaBtn.textContent = `Алфавітний порядок ${alphaSortDir === 'asc' ? '↑' : '↓'}`;
+      fetchAndRenderContactsInnerUI({search: currentSearch});
+      showApiLinkForList({search: currentSearch, dir: alphaSortDir, birthdayMode, birthdayType: undefined});
+    });
+  }
+
+  // Глобальная кнопка сортировки (стрелка рядом с режимами)
+  if (globalSortBtn && !globalSortBtn.hasAttribute('data-init')) {
+    globalSortBtn.setAttribute('data-init', '1');
+    globalSortBtn.addEventListener('click', () => {
+      if (birthdayMode) return;
+      alphaSortDir = (alphaSortDir === 'asc' ? 'desc' : 'asc');
+      document.getElementById('alpha-arrow').textContent = (alphaSortDir === 'asc' ? '\u25B2' : '\u25BC');
+      fetchAndRenderContactsInnerUI({search: currentSearch});
+      showApiLinkForList({search: currentSearch, dir: alphaSortDir, birthdayMode, birthdayType: undefined});
     });
   }
 
   if (sortBirthdayBtn) {
     sortBirthdayBtn.addEventListener('click', () => {
       birthdayMode = true;
-      fetchAndRenderContactsInner();
-      showApiLinkForList({search: currentSearch, dir: currentDir, birthdayMode, birthdayType: 'next7days'});
+      if (typeof fetchAndRenderBirthdaysTemplate === 'function') {
+        fetchAndRenderBirthdaysTemplate();
+      }
+      showApiLinkForList({search: currentSearch, dir: alphaSortDir, birthdayMode, birthdayType: 'next7days'});
     });
   }
 
-  fetchAndRenderContactsInner();
+  // --- Обработчик смены глобального режима (например, кнопки 1-4) ---
+  document.querySelectorAll('.contacts-view-btn').forEach(btn => {
+    btn.removeEventListener && btn.removeEventListener('click', btn._cascadeClickHandler, false);
+    btn._cascadeClickHandler = function() {
+      if (birthdayMode) return;
+      contactsViewMode = +btn.dataset.view;
+      expandedContactId = null;
+      fetchAndRenderContactsInnerUI({search: currentSearch});
+    };
+    btn.addEventListener('click', btn._cascadeClickHandler);
+  });
+
+  // Изначально загрузить контакты
+  fetchAndRenderContactsInnerUI({search: currentSearch});
 });
 
 // --- кінець UI: пошук і сортування контактів ---
 
 // --- API link copy & goto logic ---
+
 document.addEventListener('DOMContentLoaded', function() {
   const apiLink = document.getElementById('api-link');
   const copyBtn = document.getElementById('copy-api-link');

@@ -9,6 +9,7 @@ import logging
 
 router = APIRouter(prefix="/contacts", tags=["Contacts"])
 
+
 def get_db():
     db = SessionLocal()
     try:
