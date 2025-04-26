@@ -252,11 +252,8 @@ async function renderContacts() {
 
   let tilesHtml;
   if (contactsViewMode === 4) {
-    // В режиме 4 — всегда показываем все expanded
-    tilesHtml = await Promise.all(data.map(async contact => {
-      const fullContact = await fetchContact(contact.id);
-      return renderFullContactTile(fullContact);
-    }));
+    // В режиме 4 — показываем все expanded без лишних fetch
+    tilesHtml = data.map(contact => renderFullContactTile(contact));
   } else {
     // Для всех других режимов: если expandedContactId — раскрыть только его
     tilesHtml = await Promise.all(data.map(async contact => {
@@ -653,18 +650,18 @@ function addPhoneRow(number = '', label = 'Мобільний') {
   if (!phonesList) return;
   const div = document.createElement('div');
   div.className = 'phone-number-row';
+  // Исправленный pattern: экранирование дефиса и пробела
   div.innerHTML = `
     <div class="phone-input-wrap">
-      <input type="tel" required minlength="2" maxlength="32" pattern="[0-9()+#* -]{2,31}" placeholder="Номер телефону" value="${number}">
-      <div class="phone-error"></div>
+      <input type="tel" required minlength="2" maxlength="32" placeholder="Номер телефону" value="${number}">
+      <select>
+        <option value="Мобільний"${label==='Мобільний'?' selected':''}>Мобільний</option>
+        <option value="Домашній"${label==='Домашній'?' selected':''}>Домашній</option>
+        <option value="Робочий"${label==='Робочий'?' selected':''}>Робочий</option>
+        <option value="Інший"${label==='Інший'?' selected':''}>Інший</option>
+      </select>
+      <button type="button" class="remove-phone-btn">✕</button>
     </div>
-    <select>
-      <option value="Мобільний"${label==='Мобільний'?' selected':''}>Мобільний</option>
-      <option value="Домашній"${label==='Домашній'?' selected':''}>Домашній</option>
-      <option value="Робочий"${label==='Робочий'?' selected':''}>Робочий</option>
-      <option value="Інший"${label==='Інший'?' selected':''}>Інший</option>
-    </select>
-    <button type="button" class="remove-phone-btn">✕</button>
   `;
   phonesList.appendChild(div);
   div.querySelector('.remove-phone-btn').onclick = () => div.remove();
@@ -674,6 +671,7 @@ window.addPhoneRow = addPhoneRow;
 // Кастомна inline-валідація для телефону
 function showPhoneError(input) {
   const errorDiv = input.parentElement.querySelector('.phone-error');
+  if (!errorDiv) return;
   if (input.validity.patternMismatch) {
     errorDiv.textContent = 'Заповніть правильно: тільки цифри, +, -, (, ), пробіли';
   } else if (input.validity.valueMissing) {
@@ -696,9 +694,13 @@ document.addEventListener('blur', function(e) {
 
 // Додавання номера за кнопкою
 const addPhoneBtn = document.getElementById('add-phone-btn');
-if (addPhoneBtn && !addPhoneBtn.hasAttribute('data-init')) {
+if (addPhoneBtn) {
   addPhoneBtn.onclick = () => addPhoneRow();
-  addPhoneBtn.setAttribute('data-init', '1');
+}
+// При открытии формы всегда хотя бы одно поле телефона
+const phonesList = document.getElementById('phones-list');
+if (phonesList && phonesList.children.length === 0) {
+  addPhoneRow();
 }
 
 // При відкритті форми за замовчуванням хоча б один номер
@@ -909,27 +911,10 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  if (sortAlphaBtn) {
-    sortAlphaBtn.addEventListener('click', () => {
-      if (birthdayMode) return;
-      alphaSortDir = (alphaSortDir === 'asc' ? 'desc' : 'asc');
-      sortAlphaBtn.textContent = `Алфавітний порядок ${alphaSortDir === 'asc' ? '↑' : '↓'}`;
-      fetchAndRenderContactsInnerUI({search: currentSearch});
-      showApiLinkForList({search: currentSearch, dir: alphaSortDir, birthdayMode, birthdayType: undefined});
-    });
-  }
+  // Удалён старый обработчик sortAlphaBtn для сортировки (перенесено на делегирование)
 
   // Глобальная кнопка сортировки (стрелка рядом с режимами)
-  if (globalSortBtn && !globalSortBtn.hasAttribute('data-init')) {
-    globalSortBtn.setAttribute('data-init', '1');
-    globalSortBtn.addEventListener('click', () => {
-      if (birthdayMode) return;
-      alphaSortDir = (alphaSortDir === 'asc' ? 'desc' : 'asc');
-      document.getElementById('alpha-arrow').textContent = (alphaSortDir === 'asc' ? '\u25B2' : '\u25BC');
-      fetchAndRenderContactsInnerUI({search: currentSearch});
-      showApiLinkForList({search: currentSearch, dir: alphaSortDir, birthdayMode, birthdayType: undefined});
-    });
-  }
+  // Удалён старый обработчик globalSortBtn для сортировки (перенесено на делегирование)
 
   if (sortBirthdayBtn) {
     sortBirthdayBtn.addEventListener('click', () => {
@@ -940,18 +925,6 @@ document.addEventListener('DOMContentLoaded', function() {
       showApiLinkForList({search: currentSearch, dir: alphaSortDir, birthdayMode, birthdayType: 'next7days'});
     });
   }
-
-  // --- Обработчик смены глобального режима (например, кнопки 1-4) ---
-  document.querySelectorAll('.contacts-view-btn').forEach(btn => {
-    btn.removeEventListener && btn.removeEventListener('click', btn._cascadeClickHandler, false);
-    btn._cascadeClickHandler = function() {
-      if (birthdayMode) return;
-      contactsViewMode = +btn.dataset.view;
-      expandedContactId = null;
-      fetchAndRenderContactsInnerUI({search: currentSearch});
-    };
-    btn.addEventListener('click', btn._cascadeClickHandler);
-  });
 
   // Изначально загрузить контакты
   fetchAndRenderContactsInnerUI({search: currentSearch});
