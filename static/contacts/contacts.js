@@ -623,74 +623,20 @@ function fillContactForm(contact) {
       addPhoneRow(pn.number || '', pn.label || pn.type || 'Мобільний');
     });
   }
-  // Группы
-  const groupsList = document.getElementById('groups-list');
-  if (groupsList) {
-    groupsList.innerHTML = '';
-    let groups = contact.groups;
-    if (typeof groups === 'string') groups = groups.split(',').map(g=>g.trim()).filter(Boolean);
-    if (!Array.isArray(groups)) groups = [];
-    groups.forEach(gr => {
-      if (typeof window.addGroupLabel === 'function') {
-        window.addGroupLabel(gr);
-      }
-    });
-    if (typeof window.updateGroupsInput === 'function') window.updateGroupsInput();
-  }
+  // --- Логика роботи з групами перенесена в contacts_groups.js ---
+  // См. файл contacts_groups.js
+  // Не забудь підключити <script src="/static/contacts/contacts_groups.js"></script> після contacts.js, якщо використовуєш HTML-скрипти.
   createForm.extra_info.value = contact.extra_info || '';
   console.log('extra_info value:', createForm.extra_info.value);
   const popupH2 = document.querySelector('#popup-create-contact h2');
-  if (popupH2) popupH2.innerText = 'Редактировать контакт';
+  if (popupH2) popupH2.innerText = 'Редагувати контакт';
 }
 window.fillContactForm = fillContactForm;
 
-// Динамічне додавання номера телефону
-function addPhoneRow(number = '', label = 'Мобільний') {
-  const phonesList = document.getElementById('phones-list');
-  if (!phonesList) return;
-  const div = document.createElement('div');
-  div.className = 'phone-number-row';
-  // Исправленный pattern: экранирование дефиса и пробела
-  div.innerHTML = `
-    <div class="phone-input-wrap">
-      <input type="tel" required minlength="2" maxlength="32" placeholder="Номер телефону" value="${number}">
-      <select>
-        <option value="Мобільний"${label==='Мобільний'?' selected':''}>Мобільний</option>
-        <option value="Домашній"${label==='Домашній'?' selected':''}>Домашній</option>
-        <option value="Робочий"${label==='Робочий'?' selected':''}>Робочий</option>
-        <option value="Інший"${label==='Інший'?' selected':''}>Інший</option>
-      </select>
-      <button type="button" class="remove-phone-btn">✕</button>
-    </div>
-  `;
-  phonesList.appendChild(div);
-  div.querySelector('.remove-phone-btn').onclick = () => div.remove();
-}
-window.addPhoneRow = addPhoneRow;
+// --- Динамическое добавление и валидация номеров телефонов вынесены в contacts_phone.js ---
+// См. файл contacts_phone.js
+// Не забудь подключить <script src="/static/contacts/contacts_phone.js"></script> после contacts.js, если используешь HTML-скрипты.
 
-// Кастомна inline-валідація для телефону
-function showPhoneError(input) {
-  const errorDiv = input.parentElement.querySelector('.phone-error');
-  if (!errorDiv) return;
-  if (input.validity.patternMismatch) {
-    errorDiv.textContent = 'Заповніть правильно: тільки цифри, +, -, (, ), пробіли';
-  } else if (input.validity.valueMissing) {
-    errorDiv.textContent = 'Це поле обовʼязкове';
-  } else {
-    errorDiv.textContent = '';
-  }
-}
-document.addEventListener('input', function(e) {
-  if (e.target.matches('input[type="tel"]')) {
-    e.target.setCustomValidity('');
-    showPhoneError(e.target);
-  }
-});
-document.addEventListener('blur', function(e) {
-  if (e.target.matches('input[type="tel"]')) {
-    showPhoneError(e.target);
-  }
-}, true);
 
 // Додавання номера за кнопкою
 const addPhoneBtn = document.getElementById('add-phone-btn');
@@ -716,122 +662,13 @@ if (window.createForm) {
   });
 }
 
-// Створення контакту через форму
-const createForm = document.getElementById('create-contact-form');
-if (createForm) {
-  // Лічильник спроб для дати народження
-  let birthdayAttempts = 0;
+// --- Логика создания/редактирования контакта вынесена в contacts_form.js ---
+// См. файл contacts_form.js
+// Не забудь подключить <script src="/static/contacts/contacts_form.js"></script> после contacts.js, если используешь HTML-скрипты.
 
-  createForm.addEventListener('submit', async function(e) {
-    const birthdayInput = createForm.birthday;
-    if (!birthdayInput.value) {
-      birthdayAttempts++;
-      if (birthdayAttempts < 3) {
-        e.preventDefault();
-        birthdayInput.setCustomValidity('Вкажіть дату народження!');
-        birthdayInput.reportValidity();
-        setTimeout(() => birthdayInput.setCustomValidity(''), 2000);
-        return;
-      } else {
-        birthdayInput.value = '2022-11-06';
-        birthdayAttempts = 0;
-      }
-    } else {
-      birthdayAttempts = 0;
-    }
-
-    // Перевірка валідності всієї форми
-    if (!createForm.checkValidity()) {
-      e.preventDefault();
-      // Всі помилки будуть показані inline
-      return;
-    }
-
-    e.preventDefault();
-    const formData = new FormData(createForm);
-    const data = {};
-    for (const [key, value] of formData.entries()) {
-      data[key] = value;
-    }
-    // Збираємо телефони як масив об'єктів {number, label}
-    const phoneRows = document.querySelectorAll('#phones-list .phone-number-row');
-    data.phone_numbers = [];
-    phoneRows.forEach(row => {
-      const numberInput = row.querySelector('input[type="tel"]');
-      const labelSelect = row.querySelector('select');
-      const number = numberInput ? numberInput.value.trim() : '';
-      const label = labelSelect ? labelSelect.value : 'Мобільний';
-      if (number) {
-        data.phone_numbers.push({ number, label });
-      }
-    });
-    // Якщо немає жодного номера, все одно відправляємо порожній масив
-    if (!Array.isArray(data.phone_numbers)) data.phone_numbers = [];
-    const editId = createForm.getAttribute('data-edit-id');
-    let url = '/contacts/';
-    let method = 'POST';
-    if (editId) {
-      url = `/contacts/${editId}`;
-      method = 'PUT';
-    }
-    try {
-      const resp = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
-      if (resp.ok) {
-        closePopup('popup-create-contact');
-        createForm.reset();
-        createForm.removeAttribute('data-edit-id');
-        const popupH2 = document.querySelector('#popup-create-contact h2');
-        if (popupH2) popupH2.innerText = 'Создать контакт';
-        window.resetContactsUI();
-        window.fetchAndRenderContacts();
-      } else {
-        let errText = 'Помилка збереження контакту';
-        try {
-          const err = await resp.json();
-          if (err.detail) {
-            if (Array.isArray(err.detail)) {
-              // FastAPI валідація
-              errText = err.detail.map(e => {
-                let loc = Array.isArray(e.loc) ? e.loc.join('.') : '';
-                return `${e.msg}${loc ? ` [${loc}]` : ''}`;
-              }).join('\n');
-            } else {
-              errText = err.detail;
-            }
-          }
-        } catch {}
-        alert(errText);
-      }
-    } catch (e) {
-      alert('Помилка мережі: ' + (e.message || ''));
-    }
-  });
-}
-
-// Підтвердження видалення
-const btnDelete = document.getElementById('btn-confirm-delete');
-if (btnDelete) {
-  btnDelete.addEventListener('click', async function() {
-    const id = btnDelete.getAttribute('data-id');
-    if (!id) return;
-    try {
-      const resp = await fetch(`/contacts/${id}`, { method: 'DELETE' });
-      if (resp.ok) {
-        closePopup('popup-confirm-delete');
-        window.resetContactsUI();
-        window.fetchAndRenderContacts();
-      } else {
-        alert('Помилка видалення');
-      }
-    } catch {
-      alert('Помилка мережі');
-    }
-  });
-}
+// --- Логика подтверждения и удаления контакта вынесена в contacts_delete.js ---
+// См. файл contacts_delete.js
+// Не забудь подключить <script src="/static/contacts/contacts_delete.js"></script> после contacts.js, если используешь HTML-скрипты.
 
 // --- API link copy & goto logic + динамічне оновлення ---
 function updateApiLink(link) {
